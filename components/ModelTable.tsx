@@ -22,33 +22,24 @@ import { Button } from './ui/button';
 
 import { Navbar } from './Navbar';
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-
-import { Slider } from './ui/slider';
-
 import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, type ColumnDef, flexRender, type SortingState, type PaginationState } from '@tanstack/react-table';
-
-import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
-
-const runEffect = <A, E>(effect: Effect.Effect<A, E, any>) => Effect.runPromise(effect.pipe(Effect.provide(AppLayer)) as Effect.Effect<A, E, never>);
-
-export function ModelTable() {
-
-  const [models, setModels] = useState<Model[]>([]);
 
   const [filteredModels, setFilteredModels] = useState<Model[]>([]);
 
-  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const runEffect = <A, E>(effect: Effect.Effect<A, E, any>) => Effect.runPromise(effect.pipe(Effect.provide(AppLayer)) as Effect.Effect<A, E, never>;
 
   const [filters, setFilters] = useState<Filters>({ provider: null, costRange: [0, 10], modalities: [], capabilities: [] });
 
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
-
   useEffect(() => {
 
     const fetchModels = async () => {
+
+      setLoading(true);
 
       try {
 
@@ -72,13 +63,17 @@ export function ModelTable() {
 
         console.error(error);
 
+      } finally {
+
+        setLoading(false);
+
       }
 
     };
 
     fetchModels();
 
-  }, []);
+  }, [runEffect]);
 
   useEffect(() => {
 
@@ -328,7 +323,15 @@ export function ModelTable() {
 
       <Navbar />
 
-      <div className="p-4">
+      {loading ? (
+
+        <div className="p-4 text-center">Loading models...</div>
+
+      ) : (
+
+        <>
+
+          <div className="p-4">
 
         <Input
 
@@ -472,20 +475,21 @@ export function ModelTable() {
               </TableRow>
 
             )}
-
           </TableBody>
 
-        </Table>
+        </div>
 
-      </div>
+    </div>
 
-      <div className="flex items-center justify-center mt-4 px-4 space-x-4">
+  );
+
+  return (
+
+    <div className="flex items-center justify-center mt-4 px-4 space-x-4">
 
         <Button onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
 
           Previous
-
-        </Button>
 
         <span>Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}</span>
 
