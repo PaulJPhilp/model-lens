@@ -4,7 +4,7 @@ import type { Model } from '../types';
 import { ValidationError } from '../errors';
 
 const defaultFilters: Filters = {
-  provider: [],
+  provider: null,
   costRange: [0, 10],
   modalities: [],
   capabilities: [],
@@ -13,7 +13,7 @@ const defaultFilters: Filters = {
 export const FilterServiceLive = Layer.succeed(FilterService, {
   applyFilters: (models: Model[], search: string, filters: Filters) => Effect.sync(() => {
     let filtered = models.filter(m => search === '' || m.name.toLowerCase().includes(search.toLowerCase()));
-    if (filters.provider.length > 0) filtered = filtered.filter(m => filters.provider.includes(m.provider));
+    if (filters.provider) filtered = filtered.filter(m => m.provider === filters.provider);
     if (filters.modalities.length > 0) filtered = filtered.filter(m => filters.modalities.some(mod => m.modalities.includes(mod)));
     if (filters.capabilities.length > 0) filtered = filtered.filter(m => filters.capabilities.some(cap => m.capabilities.includes(cap)));
     filtered = filtered.filter(m => m.inputCost >= filters.costRange[0] && m.inputCost <= filters.costRange[1]);
@@ -28,6 +28,6 @@ export const FilterServiceLive = Layer.succeed(FilterService, {
         () => new ValidationError('cost', 'Min cost cannot be greater than max')
       ),
       Effect.orElseSucceed(defaultFilters)
-    );
+    ) as Effect.Effect<Filters, never>;
   },
 });

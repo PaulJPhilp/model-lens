@@ -22,6 +22,10 @@ import { Button } from './ui/button';
 
 import { Navbar } from './Navbar';
 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+
+import { Slider } from './ui/slider';
+
 import { useReactTable, getCoreRowModel, getSortedRowModel, type ColumnDef, flexRender, type SortingState } from '@tanstack/react-table';
 
 import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
@@ -36,7 +40,7 @@ export function ModelTable() {
 
   const [search, setSearch] = useState('');
 
-  const [filters, setFilters] = useState<Filters>({ provider: [], costRange: [0, 10], modalities: [], capabilities: [] });
+  const [filters, setFilters] = useState<Filters>({ provider: null, costRange: [0, 10], modalities: [], capabilities: [] });
 
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -327,8 +331,63 @@ export function ModelTable() {
           onChange={(e) => setSearch(e.target.value)}
 
         />
+        {/* Filters */}
 
-        {/* Add filters UI */}
+        <div className="flex gap-4 mt-4">
+          <Select value={filters.provider || ''} onValueChange={(value) => setFilters(prev => ({ ...prev, provider: value || null }))}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Select provider" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All</SelectItem>
+              {[...new Set(models.map(m => m.provider))].map(provider => (
+                <SelectItem key={provider} value={provider}>{provider}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex items-center gap-2">
+
+            <span>Cost: ${filters.costRange[0]} - ${filters.costRange[1]}</span>
+            <Slider
+
+              value={filters.costRange}
+
+              onValueChange={(value) => setFilters(prev => ({ ...prev, costRange: value as [number, number] }))}
+
+              max={10}
+
+              min={0}
+
+              step={0.1}
+
+              className="w-32"
+
+            />
+
+          </div>
+
+          <Input
+
+            placeholder="Modalities (comma separated)"
+
+            value={filters.modalities.join(', ')}
+
+            onChange={(e) => setFilters(prev => ({ ...prev, modalities: e.target.value.split(',').map(s => s.trim()) }))}
+
+          />
+
+          <Input
+
+            placeholder="Capabilities (comma separated)"
+
+            value={filters.capabilities.join(', ')}
+
+            onChange={(e) => setFilters(prev => ({ ...prev, capabilities: e.target.value.split(',').map(s => s.trim()) }))}
+
+          />
+
+        </div>
 
         <Table>
 

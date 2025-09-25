@@ -2,7 +2,7 @@ import { Context, Effect } from 'effect';
 import type { Model } from '../types';
 
 export interface Filters {
-  provider: string[];
+  provider: string | null;
   costRange: [number, number];
   modalities: string[];
   capabilities: string[];
