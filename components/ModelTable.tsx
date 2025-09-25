@@ -1,30 +1,32 @@
-'use client';
-
 import { useEffect, useState } from 'react';
-
-import { useRun } from '@effect/experimental';
 
 import { Effect } from 'effect';
 
-import { ModelService, ModelServiceLive } from '../lib/services/ModelService';
+import { ModelService } from '../lib/services/ModelService';
 
-import { FilterService, FilterServiceLive } from '../lib/services/FilterService';
+import { ModelServiceLive } from '../lib/services/ModelServiceLive';
+
+import { FilterService, type Filters } from '../lib/services/FilterService';
+
+import { FilterServiceLive } from '../lib/services/FilterServiceLive';
 
 import { AppLayer } from '../lib/layers';
 
-import { Model } from '../lib/types';
+import type { Model } from '../lib/types';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 
 import { Input } from './ui/input';
 
-import { Select } from './ui/select';
-
-import { Slider } from './ui/slider';
-
 import { Button } from './ui/button';
 
 import { Navbar } from './Navbar';
+
+import { useReactTable, getCoreRowModel, getSortedRowModel, type ColumnDef, flexRender, type SortingState } from '@tanstack/react-table';
+
+import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+
+const runEffect = <A, E>(effect: Effect.Effect<A, E, any>) => Effect.runPromise(effect.pipe(Effect.provide(AppLayer)) as Effect.Effect<A, E, never>);
 
 export function ModelTable() {
 
@@ -34,9 +36,9 @@ export function ModelTable() {
 
   const [search, setSearch] = useState('');
 
-  const [filters, setFilters] = useState({ provider: [], costRange: [0, 10], modalities: [], capabilities: [] });
+  const [filters, setFilters] = useState<Filters>({ provider: [], costRange: [0, 10], modalities: [], capabilities: [] });
 
-  const run = useRun();
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   useEffect(() => {
 
@@ -44,7 +46,7 @@ export function ModelTable() {
 
       try {
 
-        const result = await run(
+        const result = await runEffect(
 
           Effect.gen(function* () {
 
@@ -52,7 +54,7 @@ export function ModelTable() {
 
             return yield* service.fetchModels;
 
-          }).pipe(Effect.provide(ModelServiceLive))
+          })
 
         );
 
@@ -70,7 +72,7 @@ export function ModelTable() {
 
     fetchModels();
 
-  }, [run]);
+  }, []);
 
   useEffect(() => {
 
@@ -78,7 +80,7 @@ export function ModelTable() {
 
       try {
 
-        const result = await run(
+        const result = await runEffect(
 
           Effect.gen(function* () {
 
@@ -86,7 +88,7 @@ export function ModelTable() {
 
             return yield* service.applyFilters(models, search, filters);
 
-          }).pipe(Effect.provide(FilterServiceLive))
+          })
 
         );
 
@@ -102,9 +104,211 @@ export function ModelTable() {
 
     applyFilters();
 
-  }, [models, search, filters, run]);
+  }, [models, search, filters]);
 
-  // Add UI for search, filters
+  const columns: ColumnDef<Model>[] = [
+
+    {
+
+      accessorKey: 'name',
+
+      header: ({ column }) => {
+
+        return (
+
+          <Button
+
+            variant="ghost"
+
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+
+          >
+
+            Model Name
+
+            {column.getIsSorted() === "asc" ? <ChevronUp className="ml-2 h-4 w-4" /> :
+
+             column.getIsSorted() === "desc" ? <ChevronDown className="ml-2 h-4 w-4" /> :
+
+             <ChevronsUpDown className="ml-2 h-4 w-4" />}
+
+          </Button>
+
+        )
+
+      },
+
+    },
+
+    {
+
+      accessorKey: 'provider',
+
+      header: ({ column }) => {
+
+        return (
+
+          <Button
+
+            variant="ghost"
+
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+
+          >
+
+            Provider
+
+            {column.getIsSorted() === "asc" ? <ChevronUp className="ml-2 h-4 w-4" /> :
+
+             column.getIsSorted() === "desc" ? <ChevronDown className="ml-2 h-4 w-4" /> :
+
+             <ChevronsUpDown className="ml-2 h-4 w-4" />}
+
+          </Button>
+
+        )
+
+      },
+
+    },
+
+    {
+
+      accessorKey: 'contextWindow',
+
+      header: ({ column }) => {
+
+        return (
+
+          <Button
+
+            variant="ghost"
+
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+
+          >
+
+            Context Window
+
+            {column.getIsSorted() === "asc" ? <ChevronUp className="ml-2 h-4 w-4" /> :
+
+             column.getIsSorted() === "desc" ? <ChevronDown className="ml-2 h-4 w-4" /> :
+
+             <ChevronsUpDown className="ml-2 h-4 w-4" />}
+
+          </Button>
+
+        )
+
+      },
+
+    },
+
+    {
+
+      accessorKey: 'inputCost',
+
+      header: ({ column }) => {
+
+        return (
+
+          <Button
+
+            variant="ghost"
+
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+
+          >
+
+            Input Cost
+
+            {column.getIsSorted() === "asc" ? <ChevronUp className="ml-2 h-4 w-4" /> :
+
+             column.getIsSorted() === "desc" ? <ChevronDown className="ml-2 h-4 w-4" /> :
+
+             <ChevronsUpDown className="ml-2 h-4 w-4" />}
+
+          </Button>
+
+        )
+
+      },
+
+    },
+
+    {
+
+      accessorKey: 'modalities',
+
+      header: 'Modalities',
+
+      cell: ({ getValue }) => (getValue() as string[]).join(', '),
+
+    },
+
+    {
+
+      accessorKey: 'capabilities',
+
+      header: 'Capabilities',
+
+      cell: ({ getValue }) => (getValue() as string[]).join(', '),
+
+    },
+
+    {
+
+      accessorKey: 'releaseDate',
+
+      header: ({ column }) => {
+
+        return (
+
+          <Button
+
+            variant="ghost"
+
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+
+          >
+
+            Release Date
+
+            {column.getIsSorted() === "asc" ? <ChevronUp className="ml-2 h-4 w-4" /> :
+
+             column.getIsSorted() === "desc" ? <ChevronDown className="ml-2 h-4 w-4" /> :
+
+             <ChevronsUpDown className="ml-2 h-4 w-4" />}
+
+          </Button>
+
+        )
+
+      },
+
+    },
+
+  ];
+
+  const table = useReactTable({
+
+    data: filteredModels,
+
+    columns,
+
+    getCoreRowModel: getCoreRowModel(),
+
+    getSortedRowModel: getSortedRowModel(),
+
+    onSortingChange: setSorting,
+
+    state: {
+
+      sorting,
+
+    },
+
+  });
 
   return (
 
@@ -130,49 +334,77 @@ export function ModelTable() {
 
           <TableHeader>
 
-            <TableRow>
+            {table.getHeaderGroups().map((headerGroup) => (
 
-              <TableHead style={{ width: '200px' }}>Model Name</TableHead>
+              <TableRow key={headerGroup.id}>
 
-              <TableHead style={{ width: '100px' }}>Provider</TableHead>
+                {headerGroup.headers.map((header) => (
 
-              <TableHead style={{ width: '120px' }}>Context Window</TableHead>
+                  <TableHead key={header.id} style={{ width: header.getSize() || 'auto' }}>
 
-              <TableHead style={{ width: '100px' }}>Input Cost</TableHead>
+                    {header.isPlaceholder
 
-              <TableHead style={{ width: '100px' }}>Modalities</TableHead>
+                      ? null
 
-              <TableHead style={{ width: '120px' }}>Capabilities</TableHead>
+                      : flexRender(
 
-              <TableHead style={{ width: '100px' }}>Release Date</TableHead>
+                          header.column.columnDef.header,
 
-            </TableRow>
+                          header.getContext()
+
+                        )}
+
+                  </TableHead>
+
+                ))}
+
+              </TableRow>
+
+            ))}
 
           </TableHeader>
 
           <TableBody>
 
-            {filteredModels.map((model) => (
+            {table.getRowModel().rows?.length ? (
 
-              <TableRow key={model.name}>
+              table.getRowModel().rows.map((row) => (
 
-                <TableCell>{model.name}</TableCell>
+                <TableRow
 
-                <TableCell>{model.provider}</TableCell>
+                  key={row.id}
 
-                <TableCell>{model.contextWindow}</TableCell>
+                  data-state={row.getIsSelected() && "selected"}
 
-                <TableCell>${model.inputCost}</TableCell>
+                >
 
-                <TableCell>{model.modalities.join(', ')}</TableCell>
+                  {row.getVisibleCells().map((cell) => (
 
-                <TableCell>{model.capabilities.join(', ')}</TableCell>
+                    <TableCell key={cell.id}>
 
-                <TableCell>{model.releaseDate}</TableCell>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+
+                    </TableCell>
+
+                  ))}
+
+                </TableRow>
+
+              ))
+
+            ) : (
+
+              <TableRow>
+
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+
+                  No results.
+
+                </TableCell>
 
               </TableRow>
 
-            ))}
+            )}
 
           </TableBody>
 
