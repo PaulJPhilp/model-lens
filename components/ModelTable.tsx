@@ -26,7 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 
 import { Slider } from './ui/slider';
 
-import { useReactTable, getCoreRowModel, getSortedRowModel, type ColumnDef, flexRender, type SortingState } from '@tanstack/react-table';
+import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, type ColumnDef, flexRender, type SortingState, type PaginationState } from '@tanstack/react-table';
 
 import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 
@@ -43,6 +43,8 @@ export function ModelTable() {
   const [filters, setFilters] = useState<Filters>({ provider: null, costRange: [0, 10], modalities: [], capabilities: [] });
 
   const [sorting, setSorting] = useState<SortingState>([]);
+
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
 
   useEffect(() => {
 
@@ -304,11 +306,17 @@ export function ModelTable() {
 
     getSortedRowModel: getSortedRowModel(),
 
+    getPaginationRowModel: getPaginationRowModel(),
+
     onSortingChange: setSorting,
+
+    onPaginationChange: setPagination,
 
     state: {
 
       sorting,
+
+      pagination,
 
     },
 
@@ -471,8 +479,20 @@ export function ModelTable() {
 
       </div>
 
-    </div>
+      <div className="flex items-center justify-center mt-4 px-4 space-x-4">
 
-  );
+        <Button onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
 
-}
+          Previous
+
+        </Button>
+
+        <span>Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}</span>
+
+        <Button onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+
+          Next
+
+        </Button>
+
+      </div>
