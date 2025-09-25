@@ -16,25 +16,34 @@ import type { Model } from '../lib/types';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 
-import { Input } from './ui/input';
-
 import { Button } from './ui/button';
 
 import { Navbar } from './Navbar';
 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+
+import { Slider } from './ui/slider';
+
 import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, type ColumnDef, flexRender, type SortingState, type PaginationState } from '@tanstack/react-table';
 
-  const [filteredModels, setFilteredModels] = useState<Model[]>([]);
+import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+
+import { ModelDetails } from './ModelDetails';
+
+const [models, setModels] = useState<Model[]>([]);
 
   const [loading, setLoading] = useState(false);
 
   const runEffect = <A, E>(effect: Effect.Effect<A, E, any>) => Effect.runPromise(effect.pipe(Effect.provide(AppLayer)) as Effect.Effect<A, E, never>;
-
   const [filters, setFilters] = useState<Filters>({ provider: null, costRange: [0, 10], modalities: [], capabilities: [] });
 
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+
+  const [selectedModel, setSelectedModel] = useState<Model | null>(null);
+
+  const [detailsOpen, setDetailsOpen] = useState(false);
   useEffect(() => {
 
     const fetchModels = async () => {
@@ -289,6 +298,23 @@ import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowMode
 
     },
 
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setSelectedModel(row.original);
+            setDetailsOpen(true);
+          }}
+        >
+          Details
+        </Button>
+      ),
+    },
+
   ];
 
   const table = useReactTable({
@@ -322,6 +348,12 @@ import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowMode
     <div>
 
       <Navbar />
+
+      <ModelDetails
+        model={selectedModel}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+      />
 
       {loading ? (
 
