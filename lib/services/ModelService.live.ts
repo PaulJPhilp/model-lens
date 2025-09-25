@@ -20,7 +20,19 @@ export const ModelServiceLive = Layer.succeed(ModelService, {
     try: () => fetch('https://models.dev/api.json').then(res => res.json()),
     catch: (error) => new AppError(new NetworkError(error)),
   }).pipe(
-    Effect.flatMap((data: { models: RawModel[] }) => Effect.succeed(data.models.map(transformModel))),
+    Effect.flatMap((data: { [provider: string]: { models: { [id: string]: RawModel } } }) => {
+      const allModels: Model[] = [];
+      for (const provider in data) {
+        const providerData = data[provider];
+        if (providerData.models) {
+          for (const modelId in providerData.models) {
+            const rawModel = providerData.models[modelId];
+            allModels.push(transformModel(rawModel));
+          }
+        }
+      }
+      return Effect.succeed(allModels);
+    }),
     Effect.retry(Schedule.spaced(1000).pipe(Schedule.compose(Schedule.recurs(3))))
   ),
 });
