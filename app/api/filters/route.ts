@@ -22,9 +22,9 @@ import type {
 export async function GET(
   request: NextRequest
 ): Promise<NextResponse<FiltersListResponse | ErrorResponse>> {
+  const startTime = Date.now();
   try {
     console.log("📥 [API] GET /api/filters - Starting request");
-    const startTime = Date.now();
 
     const auth = await requireAuth(request);
     console.log(
@@ -161,9 +161,9 @@ export async function GET(
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<FilterResponse | ErrorResponse>> {
+  const startTime = Date.now();
   try {
     console.log("📥 [API] POST /api/filters - Starting request");
-    const startTime = Date.now();
 
     const auth = await requireAuth(request);
     console.log(

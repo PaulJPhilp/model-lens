@@ -143,9 +143,9 @@ function transformModel(raw: ExternalRawModel): Model {
 }
 
 export async function GET() {
+  const startTime = Date.now();
   try {
     console.log("📥 [API] GET /api/models - Starting request");
-    const startTime = Date.now();
 
     // Fetch from external API
     console.log("🌐 [API] GET /api/models - Fetching from external API");
