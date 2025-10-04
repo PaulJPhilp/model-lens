@@ -1,14 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/src/db';
-import { savedFilters } from '@/src/db/schema';
-import { eq, and, or } from 'drizzle-orm';
-import { requireAuth, canAccessFilter } from './auth';
+import { db } from "@/src/db";
+import { savedFilters } from "@/src/db/schema";
+import { and, eq, or } from "drizzle-orm";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "./auth";
 import type {
   CreateFilterRequest,
+  ErrorResponse,
   FilterResponse,
   FiltersListResponse,
-  ErrorResponse,
-} from './types';
+} from "./types";
 
 /**
  * GET /api/filters
@@ -23,53 +23,72 @@ export async function GET(
   request: NextRequest
 ): Promise<NextResponse<FiltersListResponse | ErrorResponse>> {
   try {
+    console.log("📥 [API] GET /api/filters - Starting request");
+    const startTime = Date.now();
+
     const auth = await requireAuth(request);
+    console.log(
+      "🔐 [API] GET /api/filters - Auth successful for user:",
+      auth.userId
+    );
 
     // Parse query params
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1', 10);
+    const page = parseInt(searchParams.get("page") || "1", 10);
     const pageSize = Math.min(
-      parseInt(searchParams.get('pageSize') || '20', 10),
+      parseInt(searchParams.get("pageSize") || "20", 10),
       100
     );
-    const visibility = searchParams.get('visibility') || 'all';
+    const visibility = searchParams.get("visibility") || "all";
+
+    console.log("🔍 [API] GET /api/filters - Query params:", {
+      page,
+      pageSize,
+      visibility,
+    });
 
     // Build query conditions
     const conditions = [];
 
-    if (visibility === 'all') {
+    if (visibility === "all") {
       // User's own filters OR public OR team filters
       conditions.push(
         or(
           eq(savedFilters.ownerId, auth.userId),
-          eq(savedFilters.visibility, 'public'),
+          eq(savedFilters.visibility, "public"),
           auth.teamId
             ? and(
-                eq(savedFilters.visibility, 'team'),
+                eq(savedFilters.visibility, "team"),
                 eq(savedFilters.teamId, auth.teamId)
               )
             : undefined
         )
       );
-    } else if (visibility === 'private') {
+    } else if (visibility === "private") {
       conditions.push(
         and(
           eq(savedFilters.ownerId, auth.userId),
-          eq(savedFilters.visibility, 'private')
+          eq(savedFilters.visibility, "private")
         )
       );
-    } else if (visibility === 'team' && auth.teamId) {
+    } else if (visibility === "team" && auth.teamId) {
       conditions.push(
         and(
-          eq(savedFilters.visibility, 'team'),
+          eq(savedFilters.visibility, "team"),
           eq(savedFilters.teamId, auth.teamId)
         )
       );
-    } else if (visibility === 'public') {
-      conditions.push(eq(savedFilters.visibility, 'public'));
+    } else if (visibility === "public") {
+      conditions.push(eq(savedFilters.visibility, "public"));
     }
 
     // Query filters
+    console.log(
+      "🔍 [API] GET /api/filters - Executing database query with conditions:",
+      conditions.length
+    );
+    const dbStartTime = Date.now();
+
     const filters = await db
       .select()
       .from(savedFilters)
@@ -77,6 +96,11 @@ export async function GET(
       .limit(pageSize)
       .offset((page - 1) * pageSize)
       .orderBy(savedFilters.createdAt);
+
+    const dbDuration = Date.now() - dbStartTime;
+    console.log(
+      `📊 [API] GET /api/filters - Database query completed: ${filters.length} filters found (${dbDuration}ms)`
+    );
 
     // Count total (simplified - in production use separate count query)
     const total = filters.length;
@@ -102,18 +126,27 @@ export async function GET(
       pageSize,
     };
 
+    const totalDuration = Date.now() - startTime;
+    console.log(
+      `✅ [API] GET /api/filters - Request completed successfully (${totalDuration}ms)`
+    );
     return NextResponse.json(response);
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+    const totalDuration = Date.now() - startTime;
+
+    if (error instanceof Error && error.message === "Unauthorized") {
+      console.log(
+        `🔒 [API] GET /api/filters - Unauthorized request (${totalDuration}ms)`
       );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.error('Error listing filters:', error);
+    console.error(
+      `❌ [API] GET /api/filters - Error occurred (${totalDuration}ms):`,
+      error
+    );
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -129,17 +162,28 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<FilterResponse | ErrorResponse>> {
   try {
+    console.log("📥 [API] POST /api/filters - Starting request");
+    const startTime = Date.now();
+
     const auth = await requireAuth(request);
+    console.log(
+      "🔐 [API] POST /api/filters - Auth successful for user:",
+      auth.userId
+    );
 
     // Parse request body
     const body: CreateFilterRequest = await request.json();
+    console.log("📝 [API] POST /api/filters - Creating filter:", {
+      name: body.name,
+      rulesCount: body.rules?.length,
+    });
 
     // Validate required fields
     if (!body.name || !body.rules || !Array.isArray(body.rules)) {
       return NextResponse.json(
         {
-          error: 'Invalid request',
-          details: 'name and rules are required',
+          error: "Invalid request",
+          details: "name and rules are required",
         },
         { status: 400 }
       );
@@ -149,25 +193,28 @@ export async function POST(
     if (body.rules.length === 0) {
       return NextResponse.json(
         {
-          error: 'Invalid request',
-          details: 'At least one rule is required',
+          error: "Invalid request",
+          details: "At least one rule is required",
         },
         { status: 400 }
       );
     }
 
     // Validate teamId if visibility is team
-    if (body.visibility === 'team' && !body.teamId) {
+    if (body.visibility === "team" && !body.teamId) {
       return NextResponse.json(
         {
-          error: 'Invalid request',
-          details: 'teamId required for team visibility',
+          error: "Invalid request",
+          details: "teamId required for team visibility",
         },
         { status: 400 }
       );
     }
 
     // Create filter
+    console.log("💾 [API] POST /api/filters - Inserting filter into database");
+    const dbStartTime = Date.now();
+
     const [filter] = await db
       .insert(savedFilters)
       .values({
@@ -175,10 +222,15 @@ export async function POST(
         teamId: body.teamId || null,
         name: body.name,
         description: body.description || null,
-        visibility: body.visibility || 'private',
+        visibility: body.visibility || "private",
         rules: body.rules,
       })
       .returning();
+
+    const dbDuration = Date.now() - dbStartTime;
+    console.log(
+      `✅ [API] POST /api/filters - Filter created successfully with ID: ${filter.id} (${dbDuration}ms)`
+    );
 
     // Transform to response format
     const response: FilterResponse = {
@@ -196,18 +248,27 @@ export async function POST(
       usageCount: filter.usageCount,
     };
 
+    const totalDuration = Date.now() - startTime;
+    console.log(
+      `✅ [API] POST /api/filters - Request completed successfully (${totalDuration}ms)`
+    );
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+    const totalDuration = Date.now() - startTime;
+
+    if (error instanceof Error && error.message === "Unauthorized") {
+      console.log(
+        `🔒 [API] POST /api/filters - Unauthorized request (${totalDuration}ms)`
       );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.error('Error creating filter:', error);
+    console.error(
+      `❌ [API] POST /api/filters - Error occurred (${totalDuration}ms):`,
+      error
+    );
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

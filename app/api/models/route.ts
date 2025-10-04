@@ -109,12 +109,14 @@ function transformModel(raw: ExternalRawModel): Model {
     : "";
 
   // Calculate if model is new (released in past 30 days)
-  const isNew = rd ? (() => {
-    const releaseDate = new Date(rd);
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    return releaseDate >= thirtyDaysAgo;
-  })() : false;
+  const isNew = rd
+    ? (() => {
+        const releaseDate = new Date(rd);
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        return releaseDate >= thirtyDaysAgo;
+      })()
+    : false;
 
   return {
     id: typeof raw?.id === "string" ? raw.id : "",
@@ -131,7 +133,8 @@ function transformModel(raw: ExternalRawModel): Model {
     capabilities,
     releaseDate: rd,
     lastUpdated: lu,
-    knowledge: isRecord(raw) && typeof raw.knowledge === "string" ? raw.knowledge : "",
+    knowledge:
+      isRecord(raw) && typeof raw.knowledge === "string" ? raw.knowledge : "",
     openWeights: isRecord(raw) && Boolean(raw.open_weights),
     supportsTemperature: isRecord(raw) && Boolean(raw.temperature),
     supportsAttachments: isRecord(raw) && Boolean(raw.attachment),
@@ -141,15 +144,28 @@ function transformModel(raw: ExternalRawModel): Model {
 
 export async function GET() {
   try {
+    console.log("📥 [API] GET /api/models - Starting request");
+    const startTime = Date.now();
+
     // Fetch from external API
+    console.log("🌐 [API] GET /api/models - Fetching from external API");
+    const externalStartTime = Date.now();
+
     const response = await fetch("https://models.dev/api.json");
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const dataUnknown = await response.json();
+    const externalDuration = Date.now() - externalStartTime;
+    console.log(
+      `✅ [API] GET /api/models - External API fetch completed (${externalDuration}ms)`
+    );
 
     // Transform the data (same logic as ModelServiceLive)
+    console.log("🔄 [API] GET /api/models - Transforming data");
+    const transformStartTime = Date.now();
+
     const allModels: Model[] = [];
     if (isRecord(dataUnknown)) {
       const data = dataUnknown as unknown as ProvidersMap;
@@ -168,9 +184,19 @@ export async function GET() {
       }
     }
 
+    const transformDuration = Date.now() - transformStartTime;
+    const totalDuration = Date.now() - startTime;
+    console.log(
+      `✅ [API] GET /api/models - Request completed: ${allModels.length} models processed (${transformDuration}ms transform, ${totalDuration}ms total)`
+    );
+
     return NextResponse.json({ models: allModels });
   } catch (error) {
-    console.error("API route error:", error);
+    const totalDuration = Date.now() - startTime;
+    console.error(
+      `❌ [API] GET /api/models - Error occurred (${totalDuration}ms):`,
+      error
+    );
     return NextResponse.json(
       { error: "Failed to fetch models" },
       { status: 500 }
