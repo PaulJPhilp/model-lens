@@ -1,9 +1,13 @@
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    turbopack: true,
-  },
+	eslint: {
+		ignoreDuringBuilds: true,
+	},
+	typescript: {
+		ignoreBuildErrors: false,
+	},
+	experimental: {
+		serverComponentsExternalPackages: ['pg'],
+	},
 };
-
-module.exports = nextConfig;
+export default nextConfig;

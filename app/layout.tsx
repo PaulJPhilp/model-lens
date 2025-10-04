@@ -1,25 +1,23 @@
-
 import type { Metadata } from "next";
-import { Montserrat } from "next/font/google";
+import { Geist_Mono, Montserrat } from "next/font/google";
 import "./globals.css";
 
 const montserrat = Montserrat({ subsets: ["latin"] });
+const geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ModelLens",
-  description: "Explore and visualize LLM models",
+	title: "ModelLens",
+	description: "Explore and visualize LLM models",
 };
 
 export default function RootLayout({
-  children,
+	children,
 }: Readonly<{
-  children: React.ReactNode;
+	children: React.ReactNode;
 }>) {
-  return (
-    <html lang="en" className="">
-      <body className={montserrat.className}>
-        {children}
-      </body>
-    </html>
-  );
+	return (
+		<html lang="en" className="">
+			<body className={montserrat.className}>{children}</body>
+		</html>
+	);
 }

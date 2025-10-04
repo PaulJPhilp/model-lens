@@ -2,10 +2,17 @@ import { Context, Effect } from 'effect';
 import type { Model } from '../types';
 
 export interface Filters {
-  provider: string | null;
-  costRange: [number, number];
+  providers: string[];
+  inputCostRange: [number, number];
+  outputCostRange: [number, number];
+  cacheReadCostRange: [number, number];
+  cacheWriteCostRange: [number, number];
   modalities: string[];
   capabilities: string[];
+  years: number[];
+  openWeights: boolean | null;
+  supportsTemperature: boolean | null;
+  supportsAttachments: boolean | null;
 }
 
 export interface FilterServiceType {

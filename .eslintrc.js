@@ -1,7 +1,9 @@
-
+// Converted to ESM-compatible CommonJS config by renaming to .cjs in build step
 module.exports = {
-  extends: ['next/core-web-vitals'],
-  rules: {
-    '@typescript-eslint/no-unused-vars': 'warn',
-  },
+	extends: ["next/core-web-vitals"],
+	parser: "@typescript-eslint/parser",
+	plugins: ["@typescript-eslint"],
+	rules: {
+		"@typescript-eslint/no-unused-vars": "warn",
+	},
 };
