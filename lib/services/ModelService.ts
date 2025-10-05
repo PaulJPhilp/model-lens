@@ -1,9 +1,9 @@
-import { Context, Effect } from 'effect';
-import type { Model } from '../types';
-import { AppError } from '../errors';
+import { Context, Effect } from "effect";
+import type { Model } from "../types";
 
 export interface ModelServiceType {
-  fetchModels: Effect.Effect<Model[], AppError, never>;
+  fetchModels: Effect.Effect<Model[], Error, never>;
 }
 
-export const ModelService = Context.GenericTag<ModelServiceType>('ModelService');
+export const ModelService =
+  Context.GenericTag<ModelServiceType>("ModelService");

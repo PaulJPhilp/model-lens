@@ -6,8 +6,14 @@ const nextConfig = {
 	typescript: {
 		ignoreBuildErrors: false,
 	},
-	experimental: {
-		serverComponentsExternalPackages: ['pg'],
+	serverExternalPackages: ['pg'],
+	async rewrites() {
+		return [
+			{
+				source: '/api/external/:path*',
+				destination: 'https://models.dev/:path*',
+			},
+		];
 	},
 };
 export default nextConfig;

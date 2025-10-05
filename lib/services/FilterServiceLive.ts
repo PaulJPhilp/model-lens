@@ -99,7 +99,29 @@ export const FilterServiceLive = Layer.succeed(FilterService, {
     }),
   validateFilters: (filters: Partial<Filters>) => {
     const fullFilters: Filters = { ...defaultFilters, ...filters };
-    return Effect.succeed(fullFilters).pipe(
+
+    // Clamp negative values to 0
+    const clampedFilters: Filters = {
+      ...fullFilters,
+      inputCostRange: [
+        Math.max(0, fullFilters.inputCostRange[0]),
+        fullFilters.inputCostRange[1],
+      ],
+      outputCostRange: [
+        Math.max(0, fullFilters.outputCostRange[0]),
+        fullFilters.outputCostRange[1],
+      ],
+      cacheReadCostRange: [
+        Math.max(0, fullFilters.cacheReadCostRange[0]),
+        fullFilters.cacheReadCostRange[1],
+      ],
+      cacheWriteCostRange: [
+        Math.max(0, fullFilters.cacheWriteCostRange[0]),
+        fullFilters.cacheWriteCostRange[1],
+      ],
+    };
+
+    return Effect.succeed(clampedFilters).pipe(
       Effect.filterOrFail(
         (f) =>
           f.inputCostRange[0] <= f.inputCostRange[1] &&

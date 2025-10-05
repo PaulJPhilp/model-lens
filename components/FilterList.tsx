@@ -1,24 +1,25 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/ui/select';
+import type { RuleClause } from '@/src/db/schema';
+import { useEffect, useState } from 'react';
 import { FilterEditor } from './FilterEditor';
 import { FilterRunHistory } from './FilterRunHistory';
-import type { RuleClause } from '@/src/db/schema';
 
 /**
  * Type definitions for API responses
@@ -98,6 +99,7 @@ export function FilterList({ onFilterApplied }: FilterListProps) {
 
   // Filter state
   const [visibility, setVisibility] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Modal state
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -123,6 +125,7 @@ export function FilterList({ onFilterApplied }: FilterListProps) {
         page: String(page),
         pageSize: String(pageSize),
         visibility,
+        search: searchQuery,
       });
 
       const response = await fetch(`/api/filters?${params}`);
@@ -247,7 +250,7 @@ export function FilterList({ onFilterApplied }: FilterListProps) {
    */
   useEffect(() => {
     fetchFilters();
-  }, [page, pageSize, visibility]);
+  }, [page, pageSize, visibility, searchQuery]);
 
   /**
    * Format date for display
@@ -300,6 +303,13 @@ export function FilterList({ onFilterApplied }: FilterListProps) {
               <SelectItem value="public">Public Only</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div className="flex-1 max-w-sm">
+          <Input
+            placeholder="Search filters..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
       </div>
 
@@ -449,7 +459,7 @@ export function FilterList({ onFilterApplied }: FilterListProps) {
             Previous
           </Button>
           <span className="text-sm text-muted-foreground">
-            Page {page} of {Math.ceil(total / pageSize)}
+            Showing {((page - 1) * pageSize) + 1}-{Math.min(page * pageSize, total)} of {total}
           </span>
           <Button
             variant="outline"
