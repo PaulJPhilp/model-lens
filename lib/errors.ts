@@ -1,36 +1,37 @@
-export class ApiError extends Error {
-  readonly _tag = 'ApiError';
-  constructor(public error: string, public status?: number) {
-    super(error);
-  }
+// Base error types following Effect-TS patterns
+export class ApiError {
+	readonly _tag = "ApiError" as const
+	constructor(
+		readonly error: string,
+		readonly status?: number,
+	) {}
 }
 
-export class ValidationError extends Error {
-  readonly _tag = 'ValidationError';
-  constructor(public field: string, public message: string) {
-    super(message);
-  }
+export class ValidationError {
+	readonly _tag = "ValidationError" as const
+	constructor(
+		readonly field: string,
+		readonly message: string,
+	) {}
 }
 
-export class NetworkError extends Error {
-  readonly _tag = 'NetworkError';
-  constructor(public error: unknown) {
-    super('Network error');
-  }
+export class NetworkError {
+	readonly _tag = "NetworkError" as const
+	constructor(readonly error: unknown) {}
 }
 
-export class UnknownError extends Error {
-  readonly _tag = 'UnknownError';
-  constructor(public error: unknown) {
-    super('Unknown error');
-  }
+export class UnknownError {
+	readonly _tag = "UnknownError" as const
+	constructor(readonly error: unknown) {}
 }
 
-export type AppErrorCause = ApiError | ValidationError | NetworkError | UnknownError;
+export type AppErrorCause =
+	| ApiError
+	| ValidationError
+	| NetworkError
+	| UnknownError
 
-export class AppError extends Error {
-  readonly _tag = 'AppError';
-  constructor(public cause: AppErrorCause) {
-    super('AppError');
-  }
+export class AppError {
+	readonly _tag = "AppError" as const
+	constructor(readonly cause: AppErrorCause) {}
 }

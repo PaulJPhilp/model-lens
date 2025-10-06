@@ -1,8 +1,5 @@
-
-import { ModelTable } from '../../components/ModelTable';
+import { ModelTable } from "../../components/ModelTable"
 
 export default function ModelsPage() {
-
-  return <ModelTable />;
-
+	return <ModelTable />
 }

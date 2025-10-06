@@ -1,6 +1,6 @@
-import type { Model } from "@/lib/types";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Model } from "@/lib/types";
 
 // Mock fetch for API calls
 global.fetch = vi.fn();

@@ -1,24 +1,24 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
-  "files": {
-    "ignore": ["node_modules", ".next", "dist", "build"]
-  },
-  "formatter": {
-    "enabled": true
-  },
-  "javascript": {
-    "formatter": {
-      "semicolons": "asNeeded",
-      "quoteStyle": "double",
-      "jsxQuoteStyle": "double"
-    }
-  },
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "style": {
-        "useConst": "error"
-      }
-    }
-  }
+	"$schema": "https://biomejs.dev/schemas/2.2.5/schema.json",
+	"files": {
+		"includes": ["**", "!**/node_modules", "!**/.next", "!**/dist", "!**/build"]
+	},
+	"formatter": {
+		"enabled": true
+	},
+	"javascript": {
+		"formatter": {
+			"semicolons": "asNeeded",
+			"quoteStyle": "double",
+			"jsxQuoteStyle": "double"
+		}
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"style": {
+				"useConst": "error"
+			}
+		}
+	}
 }

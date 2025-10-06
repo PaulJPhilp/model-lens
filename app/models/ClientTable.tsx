@@ -1,21 +1,31 @@
-"use client";
+"use client"
 
-import { Button } from "@/components/ui/button";
+import {
+	type ColumnDef,
+	flexRender,
+	getCoreRowModel,
+	getFilteredRowModel,
+	getSortedRowModel,
+	type SortingState,
+	useReactTable,
+} from "@tanstack/react-table"
+import * as React from "react"
+import { Button } from "@/components/ui/button"
 import {
 	Dialog,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/select"
 import {
 	Table,
 	TableBody,
@@ -23,26 +33,16 @@ import {
 	TableHead,
 	TableHeader,
 	TableRow,
-} from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
-import {
-	flexRender,
-	getCoreRowModel,
-	getFilteredRowModel,
-	getSortedRowModel,
-	useReactTable,
-	type ColumnDef,
-	type SortingState,
-} from "@tanstack/react-table";
-import * as React from "react";
-import type { Model } from "./types";
+} from "@/components/ui/table"
+import { Textarea } from "@/components/ui/textarea"
+import type { Model } from "./types"
 
 export function ClientTable({ initialModels }: { initialModels: Model[] }) {
 	const [sorting, setSorting] = React.useState<SortingState>([
 		{ id: "inputCost", desc: true },
-	]);
-	const [globalFilter, setGlobalFilter] = React.useState("");
-	const [providerFilter, setProviderFilter] = React.useState("all");
+	])
+	const [globalFilter, setGlobalFilter] = React.useState("")
+	const [providerFilter, setProviderFilter] = React.useState("all")
 
 	const columns: ColumnDef<Model>[] = [
 		{ accessorKey: "name", header: "Name" },
@@ -61,7 +61,7 @@ export function ClientTable({ initialModels }: { initialModels: Model[] }) {
 			header: "Preview",
 			cell: ({ row }) => <TokenLensPreview model={row.original} />,
 		},
-	];
+	]
 
 	const table = useReactTable({
 		data: initialModels,
@@ -75,20 +75,20 @@ export function ClientTable({ initialModels }: { initialModels: Model[] }) {
 			sorting,
 			globalFilter,
 		},
-	});
+	})
 
 	React.useEffect(() => {
 		if (providerFilter !== "all") {
-			table.getColumn("provider")?.setFilterValue(providerFilter);
+			table.getColumn("provider")?.setFilterValue(providerFilter)
 		} else {
-			table.getColumn("provider")?.setFilterValue(undefined);
+			table.getColumn("provider")?.setFilterValue(undefined)
 		}
-	}, [providerFilter, table]);
+	}, [providerFilter, table])
 
 	const providers = [
 		"all",
 		...Array.from(new Set(initialModels.map((m) => m.provider))),
-	];
+	]
 
 	return (
 		<div>
@@ -130,7 +130,7 @@ export function ClientTable({ initialModels }: { initialModels: Model[] }) {
 														header.getContext(),
 													)}
 										</TableHead>
-									);
+									)
 								})}
 							</TableRow>
 						))}
@@ -169,16 +169,16 @@ export function ClientTable({ initialModels }: { initialModels: Model[] }) {
 				</Table>
 			</div>
 		</div>
-	);
+	)
 }
 
 function TokenLensPreview({ model }: { model: Model }) {
-	const [prompt, setPrompt] = React.useState("Hello, world!");
+	const [prompt, setPrompt] = React.useState("Hello, world!")
 	// const [runEstimate, { data, isRunning }] = useRun(createEstimatorEffect);
 
 	const handleEstimate = () => {
 		// runEstimate(model, prompt);
-	};
+	}
 
 	return (
 		<Dialog>
@@ -201,5 +201,5 @@ function TokenLensPreview({ model }: { model: Model }) {
         )} */}
 			</DialogContent>
 		</Dialog>
-	);
+	)
 }

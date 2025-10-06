@@ -200,7 +200,7 @@ export default function ChatWithAISDK({
 				void fetchCitationsForQuery(userText)
 			}
 		}
-	}, [messages, isLoading])
+	}, [messages, isLoading, fetchCitationsForQuery])
 
 	// Best-effort fetch of metadata / citations using companion endpoint
 	async function fetchCitationsForQuery(queryText: string) {
@@ -216,7 +216,7 @@ export default function ChatWithAISDK({
 			}
 			const data = await res.json()
 			setCitations(data.citations ?? null)
-		} catch (err) {
+		} catch (_err) {
 			// ignore errors for meta fetch
 		}
 	}

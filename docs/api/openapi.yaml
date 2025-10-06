@@ -1,0 +1,357 @@
+openapi: 3.0.3
+info:
+  title: ModelLens API
+  description: API for fetching and managing AI model data from multiple sources
+  version: 1.0.0
+  contact:
+    name: Paul Philp
+    email: paul@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://modellens.vercel.app
+    description: Production server
+
+paths:
+  /api/models:
+    get:
+      summary: Get all AI models
+      description: Fetches AI models from multiple sources (models.dev, OpenRouter, HuggingFace, ArtificialAnalysis) and returns them in a unified format
+      operationId: getModels
+      tags:
+        - Models
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of models to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 500
+        - name: provider
+          in: query
+          description: Filter models by provider
+          required: false
+          schema:
+            type: string
+            enum: [openai, anthropic, google, meta, mistral, cohere, huggingface, openrouter, artificialanalysis]
+      responses:
+        '200':
+          description: Successful response with models data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      models:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Model'
+                  metadata:
+                    $ref: '#/components/schemas/ResponseMetadata'
+              example:
+                data:
+                  models:
+                    - id: "openai/gpt-4"
+                      name: "GPT-4"
+                      provider: "OpenAI"
+                      contextWindow: 128000
+                      maxOutputTokens: 4096
+                      inputCost: 0.03
+                      outputCost: 0.06
+                      cacheReadCost: 0.015
+                      cacheWriteCost: 0.03
+                      modalities: ["text", "image"]
+                      capabilities: ["tools", "reasoning"]
+                      releaseDate: "2023-03-14"
+                      lastUpdated: "2024-01-01"
+                      knowledge: "2023-04"
+                      openWeights: false
+                      supportsTemperature: true
+                      supportsAttachments: false
+                      new: false
+                metadata:
+                  duration: 1250
+                  timestamp: "2025-01-27T16:40:00.000Z"
+                  totalModels: 1
+        '503':
+          description: Service unavailable - external APIs are down
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Network error"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "An unexpected error occurred"
+
+  /api/models/{id}:
+    get:
+      summary: Get a specific model by ID
+      description: Fetches detailed information about a specific AI model
+      operationId: getModelById
+      tags:
+        - Models
+      parameters:
+        - name: id
+          in: path
+          description: Model ID (e.g., 'openai/gpt-4')
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response with model data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      model:
+                        $ref: '#/components/schemas/Model'
+                  metadata:
+                    $ref: '#/components/schemas/ResponseMetadata'
+        '404':
+          description: Model not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Model not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/sync-models:
+    post:
+      summary: Trigger model data synchronization
+      description: Manually triggers synchronization of model data from external APIs and stores in database
+      operationId: syncModels
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Synchronization completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Models synchronized successfully"
+                      stats:
+                        type: object
+                        properties:
+                          totalModels:
+                            type: integer
+                            example: 1250
+                          newModels:
+                            type: integer
+                            example: 45
+                          updatedModels:
+                            type: integer
+                            example: 123
+                          failedFetches:
+                            type: integer
+                            example: 1
+                  metadata:
+                    $ref: '#/components/schemas/ResponseMetadata'
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Unauthorized"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    Model:
+      type: object
+      required:
+        - id
+        - name
+        - provider
+        - contextWindow
+        - maxOutputTokens
+        - inputCost
+        - outputCost
+        - cacheReadCost
+        - cacheWriteCost
+        - modalities
+        - capabilities
+        - releaseDate
+        - lastUpdated
+        - knowledge
+        - openWeights
+        - supportsTemperature
+        - supportsAttachments
+        - new
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the model
+          example: "openai/gpt-4"
+        name:
+          type: string
+          description: Human-readable name of the model
+          example: "GPT-4"
+        provider:
+          type: string
+          description: Company or organization that created the model
+          example: "OpenAI"
+        contextWindow:
+          type: integer
+          description: Maximum number of tokens the model can process in a single request
+          example: 128000
+          minimum: 0
+        maxOutputTokens:
+          type: integer
+          description: Maximum number of tokens the model can generate in a single response
+          example: 4096
+          minimum: 0
+        inputCost:
+          type: number
+          description: Cost per 1M input tokens in USD
+          example: 0.03
+          minimum: 0
+        outputCost:
+          type: number
+          description: Cost per 1M output tokens in USD
+          example: 0.06
+          minimum: 0
+        cacheReadCost:
+          type: number
+          description: Cost per 1M cache read tokens in USD
+          example: 0.015
+          minimum: 0
+        cacheWriteCost:
+          type: number
+          description: Cost per 1M cache write tokens in USD
+          example: 0.03
+          minimum: 0
+        modalities:
+          type: array
+          description: Input/output modalities supported by the model
+          items:
+            type: string
+            enum: [text, image, audio, video, file]
+          example: ["text", "image"]
+        capabilities:
+          type: array
+          description: Special capabilities of the model
+          items:
+            type: string
+            enum: [tools, reasoning, knowledge, generation, conversation]
+          example: ["tools", "reasoning"]
+        releaseDate:
+          type: string
+          format: date
+          description: Date when the model was first released
+          example: "2023-03-14"
+        lastUpdated:
+          type: string
+          format: date
+          description: Date when the model information was last updated
+          example: "2024-01-01"
+        knowledge:
+          type: string
+          description: Knowledge cutoff date or version
+          example: "2023-04"
+        openWeights:
+          type: boolean
+          description: Whether the model weights are publicly available
+          example: false
+        supportsTemperature:
+          type: boolean
+          description: Whether the model supports temperature parameter for generation
+          example: true
+        supportsAttachments:
+          type: boolean
+          description: Whether the model supports file attachments
+          example: false
+        new:
+          type: boolean
+          description: Whether the model was released in the last 30 days
+          example: false
+
+    ResponseMetadata:
+      type: object
+      properties:
+        duration:
+          type: integer
+          description: Response time in milliseconds
+          example: 1250
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the response was generated
+          example: "2025-01-27T16:40:00.000Z"
+        totalModels:
+          type: integer
+          description: Total number of models returned
+          example: 1250
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Network error"
+        field:
+          type: string
+          description: Field name if validation error
+          example: "provider"
+        message:
+          type: string
+          description: Detailed error message
+          example: "Invalid provider specified"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for admin endpoints
+
+tags:
+  - name: Models
+    description: Operations related to AI model data
+  - name: Admin
+    description: Administrative operations (requires authentication)

@@ -1,5 +1,5 @@
-import { beforeAll, afterAll } from 'vitest';
-import { db, testConnection, runMigration } from '@/src/db';
+import { afterAll, beforeAll } from "vitest"
+import { db, runMigration, testConnection } from "@/src/db"
 
 /**
  * Setup for API route tests
@@ -13,33 +13,33 @@ import { db, testConnection, runMigration } from '@/src/db';
  */
 
 beforeAll(async () => {
-  // Check if DATABASE_URL is set
-  if (!process.env.DATABASE_URL) {
-    console.warn(
-      '\n⚠️  DATABASE_URL not set. API tests require a PostgreSQL database.\n' +
-      '   Set DATABASE_URL in .env file or skip these tests.\n'
-    );
-    throw new Error('DATABASE_URL required for API tests');
-  }
+	// Check if DATABASE_URL is set
+	if (!process.env.DATABASE_URL) {
+		console.warn(
+			"\n⚠️  DATABASE_URL not set. API tests require a PostgreSQL database.\n" +
+				"   Set DATABASE_URL in .env file or skip these tests.\n",
+		)
+		throw new Error("DATABASE_URL required for API tests")
+	}
 
-  // Test connection
-  const connected = await testConnection();
-  if (!connected) {
-    throw new Error('Failed to connect to database');
-  }
+	// Test connection
+	const connected = await testConnection()
+	if (!connected) {
+		throw new Error("Failed to connect to database")
+	}
 
-  // Run migrations
-  try {
-    await runMigration('db/migrations/0001_create_saved_filters.sql');
-  } catch (error) {
-    // Migration may already be applied, which is fine
-    if (error instanceof Error && !error.message.includes('already exists')) {
-      console.warn('Migration warning:', error.message);
-    }
-  }
-});
+	// Run migrations
+	try {
+		await runMigration("db/migrations/0001_create_saved_filters.sql")
+	} catch (error) {
+		// Migration may already be applied, which is fine
+		if (error instanceof Error && !error.message.includes("already exists")) {
+			console.warn("Migration warning:", error.message)
+		}
+	}
+})
 
 afterAll(async () => {
-  // Close database connection after all tests
-  await db.$client.end();
-});
+	// Close database connection after all tests
+	await db.$client.end()
+})

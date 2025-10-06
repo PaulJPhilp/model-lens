@@ -1,10 +1,10 @@
 # Architecture Document for ModelLens v1
 
 ## Document Version
-- **Version**: 1.0
-- **Date**: [Insert Current Date, e.g., 2025-09-24]
+- **Version**: 2.0
+- **Date**: 2025-01-27
 - **Author**: Paul Philp (with collaboration via T3 Chat)
-- **Status**: Draft for Review (Finalized upon agreement)
+- **Status**: Updated to reflect current implementation
 
 ## Overview
 ModelLens v1's architecture is designed for simplicity, testability, and extensibility, leveraging Effect 3.1.9 as the core runtime for managing side effects (e.g., API fetches, data transformation). Every component involving side effects, dependencies, or coordination will be modeled as an `Effect.Service` where applicable, enabling dependency injection (DI), mocking for tests, and composable layers. This aligns with functional programming principles: pure functions for business logic, services for impure operations (e.g., HTTP calls), and structured errors for failure handling.
@@ -13,10 +13,11 @@ The architecture is monolith-focused for v1 (single Next.js app, no monorepo yet
 - **Server-Side**: Effect services for data fetching and transformation (SSR in Next.js App Router).
 - **Client-Side**: Effect for lightweight coordination (e.g., filter state updates), integrated with React 19 hooks.
 - **UI Layer**: Shadcn/ui + TanStack React Table, styled with Tailwind 4 and the provided config/globals.css.
-- **Data Flow**: Models.dev API → Effect Service (fetch/transform) → TanStack Table (render/sort/filter/search).
+- **Data Flow**: Multiple APIs (models.dev, OpenRouter, HuggingFace, ArtificialAnalysis) → Effect Services (fetch/transform) → TanStack Table (render/sort/filter/search).
+- **Database**: PostgreSQL with Drizzle ORM for model data persistence and caching.
 - **Error Philosophy**: All Effects use standardized error types (defined below) for consistent handling—no raw exceptions; failures surface as typed errors in UI (e.g., "Failed to load models: Network error").
 
-This setup ensures v1 is lean (<500 LOC core), performant (<2s load), and ready for v2 expansions (e.g., TokenLens service).
+This setup ensures v1 is lean, performant (<2s load), and ready for v2 expansions (e.g., TokenLens service).
 
 ## Tech Stack
 - **Runtime**: Effect 3.1.9 (all services/layers); `@effect/experimental` for React hooks (e.g., `useRun` for client Effects).
@@ -26,7 +27,8 @@ This setup ensures v1 is lean (<500 LOC core), performant (<2s load), and ready 
 - **UI Primitives**: Shadcn/ui (Table, Select, Input, Slider – styled with brand classes like `.text-brand`, `.bg-elevated`).
 - **Fonts/Icons**: Next/font (Montserrat, Merriweather, Fira Code); Lucide React or SVGs for modalities/capabilities icons.
 - **Package Management**: pnpm (workspace-ready for future monorepo).
-- **Other**: No databases/auth (v1 is stateless); TypeScript 5.5+ strict mode.
+- **Database**: PostgreSQL with Drizzle ORM for model data persistence and caching.
+- **Other**: TypeScript 5.5+ strict mode; Bun for development and scripts.
 
 ## High-Level Architecture Diagram (Text-Based)
 ```
@@ -34,9 +36,11 @@ This setup ensures v1 is lean (<500 LOC core), performant (<2s load), and ready 
      |
 [Next.js App Router]  <-- SSR Page (/models): Runs Server Effects
      |
-     +-- [ModelService]  <-- Effect.Service: Fetches/transforms from Models.dev API
-           |                (Layer: HttpClient + DataTransformer)
+     +-- [ModelService]  <-- Effect.Service: Fetches/transforms from multiple APIs
+           |                (models.dev, OpenRouter, HuggingFace, ArtificialAnalysis)
+           |                (Layer: HttpClient + DataTransformer + Database)
            +-- Standardized Errors (e.g., ApiError, ValidationError)
+           +-- [ModelDataService] <-- Effect.Service: Database persistence/caching
                 |
      +-- [Table Data Provider]  <-- Passes enriched data to RSC
                 |
@@ -57,13 +61,23 @@ All services are defined as `Effect.Service` interfaces with tags for DI. Use `E
 
 ### 1. Data Layer (Server-Side Focus)
 - **ModelService** (`Effect.Service` Tag: `ModelService`):
-  - **Purpose**: Handles fetching, transformation, and error wrapping from Models.dev API.
+  - **Purpose**: Handles fetching, transformation, and error wrapping from multiple AI model APIs.
   - **Methods**:
-    - `fetchModels(): Effect<ModelService.FetchModels, ModelService.Error>`: Async Effect to GET `/api.json`, map response to `Model[]` (flatten `data.models`, validate attributes like contextWindow as number), handle retries (3x with 1s delay via `Effect.retry`).
-    - `transformModel(raw: RawModel): Model`: Pure sync function to join/normalize data (e.g., format cost as number, convert modalities to icons).
-  - **Dependencies**: Inject `HttpClient` service (e.g., using `undici` or native fetch wrapped in `Effect.tryPromise`).
-  - **Layer**: `ModelServiceLive`: Merges HttpLayer + Transformer; provides to Next.js SSR in `/models/page.tsx` via `await Effect.runPromise(ModelService.fetchModels)`.
+    - `fetchModels(): Effect<ModelService.FetchModels, ModelService.Error>`: Async Effect to fetch from multiple APIs (models.dev, OpenRouter, HuggingFace, ArtificialAnalysis), transform responses to unified `Model[]` format, handle retries (3x with exponential backoff), and optionally store in database.
+    - `fetchModelsFromAPI(): Effect<ModelService.FetchModelsFromAPI, ModelService.Error>`: Direct API fetch for real-time data without database dependency.
+    - `getModelStats(): Effect<ModelService.GetModelStats, ModelService.Error>`: Returns statistics about available models.
+  - **Dependencies**: Inject `ModelDataService` for optional database persistence; uses shared transformer utilities.
+  - **Layer**: `ModelServiceLive`: Merges HttpLayer + Transformer + Database; provides to Next.js SSR and API routes.
   - **Why Service?**: Mockable for tests (e.g., stub API responses); composable for v2 joins (e.g., TokenLens).
+
+- **ModelDataService** (`Effect.Service` Tag: `ModelDataService`):
+  - **Purpose**: Handles database persistence and caching of model data.
+  - **Methods**:
+    - `storeModelBatch(models: Model[]): Effect<ModelDataService.StoreModelBatch, ModelDataService.Error>`: Batch insert/update models in PostgreSQL.
+    - `getModelsFromDB(): Effect<ModelDataService.GetModels, ModelDataService.Error>`: Retrieve models from database.
+  - **Dependencies**: PostgreSQL connection via Drizzle ORM.
+  - **Layer**: `ModelDataServiceLive`: Provides database operations to other services.
+  - **Why Service?**: Enables background data persistence; mockable for tests.
 
 - **Types** (in `@myorg/core/types.ts` for shared):
   - `Model`: Interface as PRD (name: string, provider: string, contextWindow: number, inputCost: number, modalities: string[], capabilities: string[], releaseDate: string).
@@ -99,27 +113,43 @@ All services are defined as `Effect.Service` interfaces with tags for DI. Use `E
 ## Standardized Error Handling with Effect
 All Effects use a unified error union type, surfaced via `Effect.catchAll` or `orElse` for graceful degradation. Errors are typed, logged (console.error), and rendered in UI (e.g., toast or inline message).
 
-- **Core Error Type** (`@myorg/core/errors.ts`):
+- **Core Error Type** (`lib/errors.ts`):
   ```typescript
   import { Effect } from 'effect';
-  import * as Cause from 'effect/Cause';
 
-  export class AppError extends Effect.Error<AppError>() {
-    readonly _tag = 'AppError';
-    constructor(readonly cause: Cause.Cause<AppErrorCause>) {}
-  }
+  export class ApiError extends Effect.TaggedError("ApiError")<{
+    readonly error: string;
+    readonly status?: number;
+  }>() {}
+
+  export class ValidationError extends Effect.TaggedError("ValidationError")<{
+    readonly field: string;
+    readonly message: string;
+  }>() {}
+
+  export class NetworkError extends Effect.TaggedError("NetworkError")<{
+    readonly error: unknown;
+  }>() {}
+
+  export class UnknownError extends Effect.TaggedError("UnknownError")<{
+    readonly error: unknown;
+  }>() {}
 
   export type AppErrorCause =
-    | { _tag: 'ApiError'; error: string; status?: number }  // e.g., Models.dev 500
-    | { _tag: 'ValidationError'; field: string; message: string }  // e.g., Invalid cost range
-    | { _tag: 'NetworkError'; error: unknown }  // Fetch failures
-    | { _tag: 'UnknownError'; error: unknown };  // Catch-all
+    | ApiError
+    | ValidationError
+    | NetworkError
+    | UnknownError;
+
+  export class AppError extends Effect.TaggedError("AppError")<{
+    readonly cause: AppErrorCause;
+  }>() {}
   ```
 - **Usage Standards**:
-  - **Fetching**: `Effect.tryPromise({ try: () => fetch(url), catch: (e) => new AppError({ _tag: 'NetworkError', error: e }) })`.
-  - **Validation**: `Effect.fail(new AppError({ _tag: 'ValidationError', field: 'cost', message: 'Range must be 0-10' }))`.
+  - **Fetching**: `Effect.tryPromise({ try: () => fetch(url), catch: (e) => new AppError(new NetworkError(e)) })`.
+  - **Validation**: `Effect.fail(new AppError(new ValidationError('cost', 'Range must be 0-10')))`.
   - **Handling**: In services, `Effect.tapErrorCause((cause) => Effect.logError(JSON.stringify(cause)))`; in UI, `orElseSucceed(fallback)` (e.g., empty array for models, "Data unavailable" message).
-  - **Retry Policy**: For API calls, `Effect.retry({ times: 3, delay: (n) => n * 1000 })`.
+  - **Retry Policy**: For API calls, use `withRetryAndLogging` helper with exponential backoff and configurable retry counts.
   - **Testing**: Mock with `Effect.fail(new AppError(...))` for error paths.
   - **Global Provider**: Wrap app in `Effect.Runtime` (Next.js provider); use `Effect.provide(modelServiceLayer)` in pages.
 
@@ -129,5 +159,34 @@ All Effects use a unified error union type, surfaced via `Effect.catchAll` or `o
   - Client Components: Use `@effect/experimental/Run` hooks (e.g., `useRun(FilterService.applyFilters)`).
   - API Routes: Not needed for v1 (SSR only), but if added: Route handlers run Effects similarly.
 - **Build**: pnpm build; Vercel auto-deploys from GitHub (root dir: ./, install: pnpm i).
-- **Layers Composition** (in lib/layers.ts): `const AppLayer = Layer.mergeAll(ModelServiceLive, FilterServiceLive, ModeServiceLive);` – Provide to root in _app or page.
-- **Testing**: Vitest for services (mock layers: `Layer.succeed(ModelService, mockImpl)`); no E2E for v1.
+- **Layers Composition** (in lib/layers.ts): `const AppLayer = Layer.mergeAll(ModelServiceLive, FilterServiceLive, ModeServiceLive, ModelDataServiceLive);` – Provide to root in _app or page.
+- **Testing**: Vitest for services (mock layers: `Layer.succeed(ModelService, mockImpl)`); comprehensive test coverage for all service implementations.
+- **Environment**: Centralized environment validation with required variables (DATABASE_URL, NODE_ENV) and optional configuration (retry policies).
+- **Scripts**: Daily sync script (`src/scripts/sync-models.ts`) for automated data updates.
+
+## Implementation Status vs Original Plan
+
+### ✅ **Completed Features**
+- **Multiple API Sources**: Successfully integrated models.dev, OpenRouter, HuggingFace, and ArtificialAnalysis APIs
+- **Database Integration**: PostgreSQL with Drizzle ORM for model data persistence and caching
+- **Shared Transformers**: Centralized model transformation logic in `lib/transformers/model-transformer.ts`
+- **Environment Validation**: Comprehensive environment variable validation with proper error handling
+- **Retry Policies**: Standardized retry mechanisms with exponential backoff for all external API calls
+- **Error Handling**: Proper Effect-TS error types with structured error propagation
+- **Component Architecture**: Refactored ModelTable into focused, reusable components
+- **Test Coverage**: Comprehensive unit tests for all service implementations
+- **API Routes**: Public endpoints for models and admin endpoints for data synchronization
+
+### 🔄 **Architecture Decisions Made**
+1. **Database Addition**: Added PostgreSQL for data persistence (originally planned as stateless)
+2. **Multiple APIs**: Expanded from single models.dev API to four sources for comprehensive coverage
+3. **Background Sync**: Implemented automated daily synchronization with database storage
+4. **Component Splitting**: Broke down monolithic ModelTable into specialized hooks and components
+5. **Effect-TS Integration**: Full Effect-TS adoption with proper service composition and dependency injection
+
+### 📋 **Current Architecture Benefits**
+- **Resilience**: Partial failure handling with graceful degradation
+- **Performance**: Background data persistence with real-time API fallback
+- **Maintainability**: Modular components with clear separation of concerns
+- **Testability**: Comprehensive mocking and isolated unit tests
+- **Scalability**: Ready for v2 expansions (TokenLens, additional APIs)

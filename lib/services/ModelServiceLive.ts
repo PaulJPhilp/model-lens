@@ -1,194 +1,367 @@
-import { Effect, Layer, Schedule } from "effect";
-import type { Model } from "../types";
-import { ModelService } from "./ModelService";
+import { Effect, Layer } from "effect"
+import { withRetryAndLogging } from "../config/retry"
+import { transformModelsDevResponse } from "../transformers/model-transformer"
+import type { Model } from "../types"
+import { transformArtificialAnalysisModel } from "./ArtificialAnalysisService"
+import { CACHE_KEYS, CACHE_TTL, CacheService } from "./CacheService"
+import { transformHuggingFaceModel } from "./HuggingFaceService"
+import { ModelDataService } from "./ModelDataService"
+import { ModelService } from "./ModelService"
 
-interface ExternalModelCost {
-  input?: number | string;
-  output?: number | string;
-  cache_read?: number | string;
-  cacheRead?: number | string;
-  cache_write?: number | string;
-  cacheWrite?: number | string;
+// OpenRouter API types
+interface OpenRouterModel {
+	id: string
+	name: string
+	description?: string
+	context_length: number
+	architecture: {
+		modality: string
+		input_modalities: string[]
+		output_modalities: string[]
+		tokenizer?: string
+		instruct_type?: string
+	}
+	pricing: {
+		prompt: string
+		completion: string
+		request?: string
+		image?: string
+		web_search?: string
+		internal_reasoning?: string
+	}
+	top_provider: {
+		context_length: number
+		max_completion_tokens?: number
+		is_moderated?: boolean
+	}
+	supported_parameters?: string[]
 }
 
-interface ExternalModelLimit {
-  context?: number | string;
-  output?: number | string;
+interface OpenRouterResponse {
+	data: OpenRouterModel[]
 }
 
-interface ExternalModelModalities {
-  input?: unknown;
-  output?: unknown;
-}
+// Transform OpenRouter model to our internal Model format
+function transformOpenRouterModel(openRouterModel: OpenRouterModel): Model {
+	// Extract provider from model ID (e.g., "openai/gpt-4" -> "openai")
+	const provider = openRouterModel.id.split("/")[0] || "unknown"
 
-interface ExternalRawModel {
-  id?: unknown;
-  name?: unknown;
-  provider?: unknown;
-  cost?: ExternalModelCost;
-  limit?: ExternalModelLimit;
-  modalities?: ExternalModelModalities;
-  release_date?: unknown;
-  releaseDate?: unknown;
-  last_updated?: unknown;
-  lastUpdated?: unknown;
-  tool_call?: unknown;
-  reasoning?: unknown;
-  knowledge?: unknown;
-  open_weights?: unknown;
-  temperature?: unknown;
-  attachment?: unknown;
-}
+	// Extract capabilities from supported parameters
+	const capabilities: string[] = []
+	if (openRouterModel.supported_parameters?.includes("tools")) {
+		capabilities.push("tools")
+	}
 
-interface ProvidersMapValue {
-  models?: Record<string, ExternalRawModel>;
-}
+	// Determine modalities
+	const modalities = Array.from(
+		new Set([
+			...openRouterModel.architecture.input_modalities,
+			...openRouterModel.architecture.output_modalities,
+		]),
+	)
 
-type ProvidersMap = Record<string, ProvidersMapValue>;
+	// Parse pricing
+	const inputCost = parseFloat(openRouterModel.pricing.prompt) || 0
+	const outputCost = parseFloat(openRouterModel.pricing.completion) || 0
+	const _imageCost = parseFloat(openRouterModel.pricing.image || "0") || 0
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function toNumber(value: unknown): number {
-  const num =
-    typeof value === "string" || typeof value === "number"
-      ? Number(value)
-      : Number.NaN;
-  return Number.isFinite(num) ? num : 0;
-}
-
-function toStringArray(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value.map((v) => String(v));
-  }
-  return [];
-}
-
-function toBoolean(value: unknown): boolean {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "string") return value.toLowerCase() === "true";
-  return Boolean(value);
-}
-
-// Normalize external models.dev shape into our `Model` shape used by the UI
-function transformModel(raw: ExternalRawModel, provider: string): Model {
-  const cost: ExternalModelCost =
-    isRecord(raw) && isRecord(raw.cost as unknown)
-      ? (raw.cost as ExternalModelCost)
-      : {};
-  const limit: ExternalModelLimit =
-    isRecord(raw) && isRecord(raw.limit as unknown)
-      ? (raw.limit as ExternalModelLimit)
-      : {};
-  const modalitiesObj: ExternalModelModalities =
-    isRecord(raw) && isRecord(raw.modalities as unknown)
-      ? (raw.modalities as ExternalModelModalities)
-      : {};
-
-  const inputModalities = toStringArray(modalitiesObj.input);
-  const outputModalities = toStringArray(modalitiesObj.output);
-  const modalities = Array.from(
-    new Set([...inputModalities, ...outputModalities])
-  );
-
-  const capabilities: string[] = [];
-  if (isRecord(raw)) {
-    if ("tool_call" in raw && raw.tool_call === true)
-      capabilities.push("tools");
-    if ("reasoning" in raw && raw.reasoning === true)
-      capabilities.push("reasoning");
-    if ("knowledge" in raw && raw.knowledge === true)
-      capabilities.push("knowledge");
-  }
-
-  const rd = isRecord(raw)
-    ? typeof raw.release_date === "string"
-      ? raw.release_date
-      : typeof raw.releaseDate === "string"
-      ? raw.releaseDate
-      : ""
-    : "";
-
-  const lu = isRecord(raw)
-    ? typeof raw.last_updated === "string"
-      ? raw.last_updated
-      : typeof raw.lastUpdated === "string"
-      ? raw.lastUpdated
-      : ""
-    : "";
-
-  // Calculate if model is new (released in past 30 days)
-  const isNew = rd
-    ? (() => {
-        const releaseDate = new Date(rd);
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        return releaseDate >= thirtyDaysAgo;
-      })()
-    : false;
-
-  // Determine provider - use "Unknown" if model data is invalid
-  const hasValidId = typeof raw?.id === "string" && raw.id.trim() !== "";
-  const hasValidName = typeof raw?.name === "string" && raw.name.trim() !== "";
-  const finalProvider = hasValidId && hasValidName ? provider : "Unknown";
-
-  return {
-    id: typeof raw?.id === "string" ? raw.id : "",
-    name: typeof raw?.name === "string" ? raw.name : "Unknown",
-    provider: finalProvider,
-    contextWindow: toNumber(limit.context),
-    maxOutputTokens: toNumber(limit.output),
-    inputCost: toNumber(cost.input),
-    outputCost: toNumber(cost.output),
-    cacheReadCost: toNumber(cost.cache_read || cost.cacheRead),
-    cacheWriteCost: toNumber(cost.cache_write || cost.cacheWrite),
-    modalities,
-    capabilities,
-    releaseDate: rd,
-    lastUpdated: lu,
-    knowledge:
-      isRecord(raw) && typeof raw.knowledge === "string" ? raw.knowledge : "",
-    openWeights: isRecord(raw) && toBoolean(raw.open_weights),
-    supportsTemperature: isRecord(raw) && toBoolean(raw.temperature),
-    supportsAttachments: isRecord(raw) && toBoolean(raw.attachment),
-    new: isNew,
-  };
+	return {
+		id: openRouterModel.id,
+		name: openRouterModel.name,
+		provider,
+		contextWindow: openRouterModel.context_length,
+		maxOutputTokens: openRouterModel.top_provider.max_completion_tokens || 4096,
+		inputCost,
+		outputCost,
+		cacheReadCost: 0, // OpenRouter doesn't specify cache costs in this format
+		cacheWriteCost: 0,
+		modalities,
+		capabilities,
+		releaseDate: "", // OpenRouter doesn't provide release dates
+		lastUpdated: "",
+		knowledge: openRouterModel.description || "",
+		openWeights: false, // Assume not open weights unless specified
+		supportsTemperature:
+			openRouterModel.supported_parameters?.includes("temperature") || false,
+		supportsAttachments: modalities.includes("image"),
+		new: false,
+	}
 }
 
 export const ModelServiceLive = Layer.succeed(ModelService, {
-  fetchModels: Effect.tryPromise({
-    try: () => fetch("/api/external/api.json").then((res) => res.json()),
-    catch: (error) => {
-      throw new Error(
-        `Failed to fetch models: ${
-          error instanceof Error ? error.message : "Network error"
-        }`
-      );
-    },
-  }).pipe(
-    Effect.flatMap((dataUnknown: unknown) => {
-      const allModels: Model[] = [];
-      if (isRecord(dataUnknown)) {
-        const data = dataUnknown as unknown as ProvidersMap;
-        for (const provider in data) {
-          const providerData = data[provider];
-          if (providerData?.models) {
-            const models = providerData.models;
-            for (const modelId in models) {
-              const rawModel = models[modelId];
-              const transformedModel = transformModel(rawModel, provider);
-              allModels.push(transformedModel);
-            }
-          }
-        }
-      }
-      return Effect.succeed(allModels);
-    }),
-    Effect.retry(
-      Schedule.spaced(Number(process.env.MODEL_SERVICE_RETRY_MS ?? 1000)).pipe(
-        Schedule.compose(Schedule.recurs(3))
-      )
-    )
-  ),
-});
+	fetchModels: Effect.gen(function* () {
+		// Check cache first
+		const cacheService = yield* CacheService
+		const cachedModels = yield* cacheService.get<Model[]>(CACHE_KEYS.MODELS)
+
+		if (cachedModels) {
+			console.log(
+				`🎯 [ModelService] Using cached models (${cachedModels.length} models)`,
+			)
+			return cachedModels
+		}
+
+		// Primary source: external APIs (live data)
+		console.log("🌐 [ModelService] Fetching fresh models from external APIs")
+
+		// Fetch from all sources with partial failure handling
+		const fetchResults = yield* Effect.all(
+			[
+				// Fetch from models.dev
+				withRetryAndLogging(
+					Effect.tryPromise({
+						try: () => fetch("https://models.dev/api.json"),
+						catch: (error) => {
+							throw new Error(
+								`Failed to fetch from models.dev: ${
+									error instanceof Error ? error.message : "Network error"
+								}`,
+							)
+						},
+					}).pipe(
+						Effect.flatMap((dataUnknown: unknown) => {
+							const allModels = transformModelsDevResponse(dataUnknown)
+							return Effect.succeed(allModels)
+						}),
+					),
+					"models.dev API fetch",
+				),
+
+				// Fetch from OpenRouter
+				withRetryAndLogging(
+					Effect.tryPromise({
+						try: () => fetch("https://openrouter.ai/api/v1/models"),
+						catch: (error) => {
+							throw new Error(
+								`Failed to fetch from OpenRouter: ${
+									error instanceof Error ? error.message : "Network error"
+								}`,
+							)
+						},
+					}).pipe(
+						Effect.flatMap((dataUnknown: unknown) => {
+							const response = dataUnknown as { data?: any[] }
+							const models = (response.data || []).map(transformOpenRouterModel)
+							return Effect.succeed(models)
+						}),
+					),
+					"OpenRouter API fetch",
+				),
+
+				// Fetch from HuggingFace
+				withRetryAndLogging(
+					Effect.tryPromise({
+						try: () =>
+							fetch(
+								"https://huggingface.co/api/models?limit=100&sort=downloads&direction=-1",
+							).then((res) => res.json()),
+						catch: (error) => {
+							throw new Error(
+								`Failed to fetch from HuggingFace: ${
+									error instanceof Error ? error.message : "Network error"
+								}`,
+							)
+						},
+					}).pipe(
+						Effect.flatMap((dataUnknown: unknown) => {
+							const models: Model[] = (dataUnknown as any[]).map(
+								transformHuggingFaceModel,
+							)
+							return Effect.succeed(models)
+						}),
+					),
+					"HuggingFace API fetch",
+				),
+
+				// Fetch from ArtificialAnalysis
+				withRetryAndLogging(
+					Effect.tryPromise({
+						try: () =>
+							fetch("https://artificialanalysis.ai/api/datasets/96.csv").then(
+								async (res) => {
+									const csvText = await res.text()
+									const lines = csvText.trim().split("\n")
+									const headers = lines[0].split(",")
+
+									const models: any[] = []
+									for (let i = 1; i < lines.length; i++) {
+										const values = lines[i].split(",")
+										if (values.length >= headers.length) {
+											const model: any = {}
+											headers.forEach((header, index) => {
+												if (header === "intelligenceIndex") {
+													model[header] = parseFloat(values[index]) || 0
+												} else if (header === "isLabClaimedValue") {
+													model[header] = values[index].toLowerCase() === "true"
+												} else {
+													model[header] = values[index]
+												}
+											})
+											models.push(model)
+										}
+									}
+									return models
+								},
+							),
+						catch: (error) => {
+							throw new Error(
+								`Failed to fetch from ArtificialAnalysis: ${
+									error instanceof Error ? error.message : "Network error"
+								}`,
+							)
+						},
+					}).pipe(
+						Effect.flatMap((dataUnknown: unknown) => {
+							const models: Model[] = (dataUnknown as any[]).map(
+								transformArtificialAnalysisModel,
+							)
+							return Effect.succeed(models)
+						}),
+					),
+					"ArtificialAnalysis API fetch",
+				),
+			].map((effect) => Effect.either(effect)),
+			{ concurrency: 4 },
+		)
+
+		// Process results and collect any errors
+		const modelsDevModels =
+			fetchResults[0]._tag === "Right" ? fetchResults[0].right : []
+		const openRouterModels =
+			fetchResults[1]._tag === "Right" ? fetchResults[1].right : []
+		const huggingFaceModels =
+			fetchResults[2]._tag === "Right" ? fetchResults[2].right : []
+		const artificialAnalysisModels =
+			fetchResults[3]._tag === "Right" ? fetchResults[3].right : []
+
+		// Log any failures
+		if (fetchResults[0]._tag === "Left") {
+			console.error(
+				"❌ [ModelService] models.dev fetch failed:",
+				fetchResults[0].left.message,
+			)
+		}
+		if (fetchResults[1]._tag === "Left") {
+			console.error(
+				"❌ [ModelService] OpenRouter fetch failed:",
+				fetchResults[1].left.message,
+			)
+		}
+		if (fetchResults[2]._tag === "Left") {
+			console.error(
+				"❌ [ModelService] HuggingFace fetch failed:",
+				fetchResults[2].left.message,
+			)
+		}
+		if (fetchResults[3]._tag === "Left") {
+			console.error(
+				"❌ [ModelService] ArtificialAnalysis fetch failed:",
+				fetchResults[3].left.message,
+			)
+		}
+
+		const allModels = [
+			...modelsDevModels,
+			...openRouterModels,
+			...huggingFaceModels,
+			...artificialAnalysisModels,
+		]
+		console.log(
+			`✅ [ModelService] Fetched ${allModels.length} models from external APIs (${modelsDevModels.length} from models.dev, ${openRouterModels.length} from OpenRouter, ${huggingFaceModels.length} from HuggingFace, ${artificialAnalysisModels.length} from ArtificialAnalysis)`,
+		)
+
+		// Cache the results
+		yield* cacheService.set(CACHE_KEYS.MODELS, allModels, CACHE_TTL.MODELS)
+		console.log("💾 [ModelService] Cached models for future requests")
+
+		// Optionally store in database for analytics/caching (if service available)
+		const modelDataServiceOption = yield* Effect.serviceOption(ModelDataService)
+		if (modelDataServiceOption._tag === "Some" && allModels.length > 0) {
+			const modelDataService = modelDataServiceOption.value
+
+			// Store models in background - don't wait for completion
+			yield* Effect.fork(
+				Effect.gen(function* () {
+					const syncRecord = yield* modelDataService.startSync()
+					if (modelsDevModels.length > 0) {
+						yield* modelDataService.storeModelBatch(
+							modelsDevModels,
+							syncRecord.id,
+							"models.dev",
+						)
+					}
+					if (openRouterModels.length > 0) {
+						yield* modelDataService.storeModelBatch(
+							openRouterModels,
+							syncRecord.id,
+							"openrouter",
+						)
+					}
+					if (huggingFaceModels.length > 0) {
+						yield* modelDataService.storeModelBatch(
+							huggingFaceModels,
+							syncRecord.id,
+							"huggingface",
+						)
+					}
+					if (artificialAnalysisModels.length > 0) {
+						yield* modelDataService.storeModelBatch(
+							artificialAnalysisModels,
+							syncRecord.id,
+							"artificialanalysis",
+						)
+					}
+					yield* modelDataService.completeSync(
+						syncRecord.id,
+						allModels.length,
+						allModels.length,
+					)
+				}).pipe(
+					Effect.catchAll((error) =>
+						Effect.sync(() => {
+							console.log(
+								"⚠️ [ModelService] Background database storage failed:",
+								error,
+							)
+						}),
+					),
+				),
+			)
+		}
+
+		return allModels
+	}),
+
+	fetchModelsFromAPI: withRetryAndLogging(
+		Effect.tryPromise({
+			try: () => fetch("https://models.dev/api.json").then((res) => res.json()),
+			catch: (error) => {
+				throw new Error(
+					`Failed to fetch models: ${
+						error instanceof Error ? error.message : "Network error"
+					}`,
+				)
+			},
+		}).pipe(
+			Effect.flatMap((dataUnknown: unknown) => {
+				const allModels = transformModelsDevResponse(dataUnknown)
+				console.log(
+					`🌐 [ModelService] Fetched ${allModels.length} models directly from external API`,
+				)
+				return Effect.succeed(allModels)
+			}),
+		),
+		"Direct models.dev API fetch",
+	),
+
+	getModelStats: Effect.gen(function* () {
+		// ModelDataService not available in this context, return empty stats
+		console.log("⚠️ [ModelService] ModelDataService not available for stats")
+		return {
+			totalModels: 0,
+			providers: [],
+			lastSyncAt: undefined,
+			modelCountByProvider: {},
+		}
+	}),
+})
