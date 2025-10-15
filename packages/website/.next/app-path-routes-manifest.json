@@ -1,0 +1,18 @@
+{
+  "/api/chat/route": "/api/chat",
+  "/api/chat/meta/route": "/api/chat/meta",
+  "/api/filters/[id]/evaluate/route": "/api/filters/[id]/evaluate",
+  "/api/filters/[id]/route": "/api/filters/[id]",
+  "/api/filters/[id]/runs/[runId]/route": "/api/filters/[id]/runs/[runId]",
+  "/api/filters/[id]/runs/route": "/api/filters/[id]/runs",
+  "/api/filters/route": "/api/filters",
+  "/api/models/route": "/api/models",
+  "/_not-found/page": "/_not-found",
+  "/api-docs/page": "/api-docs",
+  "/filters/page": "/filters",
+  "/chat/page": "/chat",
+  "/models/page": "/models",
+  "/page": "/",
+  "/timeline/[model]/page": "/timeline/[model]",
+  "/api/admin/sync-models/route": "/api/admin/sync-models"
+}
