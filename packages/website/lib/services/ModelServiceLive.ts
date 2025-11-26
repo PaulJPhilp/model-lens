@@ -92,7 +92,7 @@ export const ModelServiceLive = Layer.succeed(ModelService, {
 	fetchModels: Effect.gen(function* () {
 		// Check cache first
 		const cacheService = yield* CacheService
-		const cachedModels = yield* cacheService.get<Model[]>(CACHE_KEYS.MODELS)
+		const cachedModels = yield* (cacheService.get as any)(CACHE_KEYS.MODELS)
 
 		if (cachedModels !== null) {
 			console.log(
@@ -185,7 +185,7 @@ export const ModelServiceLive = Layer.succeed(ModelService, {
 							}),
 							Effect.flatMap((data) =>
 								Effect.try({
-									try: () => transformOpenRouterModel(data),
+									try: () => transformOpenRouterModel(data as OpenRouterModel),
 									catch: (error) =>
 										Effect.fail(
 											new Error(
@@ -225,7 +225,7 @@ export const ModelServiceLive = Layer.succeed(ModelService, {
 						}).pipe(
 							Effect.flatMap((data) =>
 								Effect.try({
-									try: () => transformHuggingFaceModel(data),
+									try: () => transformHuggingFaceModel(data as any),
 									catch: (error) =>
 										Effect.fail(
 											new Error(

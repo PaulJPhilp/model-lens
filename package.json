@@ -1,4 +1,5 @@
 {
+  "name": "effect-models",
   "private": true,
   "type": "module",
   "workspaces": [

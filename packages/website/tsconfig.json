@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
-		"target": "ES2017",
-		"lib": ["dom", "dom.iterable", "es6"],
+		"target": "ES2022",
+		"lib": ["ES2022"],
 		"allowJs": true,
 		"skipLibCheck": true,
 		"strict": true,
@@ -11,32 +11,19 @@
 		"moduleResolution": "bundler",
 		"resolveJsonModule": true,
 		"isolatedModules": true,
-		"jsx": "preserve",
-		"jsxImportSource": "react",
 		"incremental": true,
-		"plugins": [
-			{
-				"name": "next"
-			}
-		],
 		"baseUrl": ".",
+		"types": ["bun-types"],
 		"paths": {
-			"@/*": ["./*"],
-			"@app/*": ["./app/*"],
-			"@components/*": ["./components/*"],
-			"@domain/*": ["./domain/*"],
-			"@managers/*": ["./managers/*"],
-			"@services/*": ["./lib/services/*"],
-			"@schemas/*": ["./src/db/schema*"],
-			"@type/*": ["./lib/types.ts"],
-			"@ui-state/*": ["./ui-state/*"],
-			"@utils/*": ["./lib/utils.ts"],
-			"@config/*": ["./lib/config/*"],
-			"@transformers/*": ["./lib/transformers/*"],
-			"@api/*": ["./lib/api/*"],
+			"@/*": ["./src/*"],
+			"@services/*": ["./src/services/*", "./lib/services/*"],
+			"@db/*": ["./src/db/*"],
+			"@lib/*": ["./src/lib/*", "./lib/*"],
+			"@routes/*": ["./src/routes/*"],
+			"@middleware/*": ["./src/middleware/*"],
 			"@tests/*": ["./tests/*"]
 		}
 	},
-	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-	"exclude": ["node_modules"]
+	"include": ["src/**/*.ts", "lib/**/*.ts", "tests/**/*.ts"],
+	"exclude": ["node_modules", "dist", ".next"]
 }

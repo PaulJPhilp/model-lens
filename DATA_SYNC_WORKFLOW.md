@@ -1,10 +1,10 @@
-# Model Lens Data Sync Workflow
+# Effect Models Data Sync Workflow
 
 This document describes the automated workflow for downloading AI model data and building the database on a schedule.
 
 ## Overview
 
-The Model Lens application maintains an up-to-date database of AI models by periodically fetching data from multiple external APIs and storing it in PostgreSQL. The sync process runs automatically and includes monitoring and health checks.
+The Effect Models application maintains an up-to-date database of AI models by periodically fetching data from multiple external APIs and storing it in PostgreSQL. The sync process runs automatically and includes monitoring and health checks.
 
 ## Data Sources
 
@@ -83,10 +83,10 @@ This creates cron jobs for:
 **Cron Schedule:**
 ```
 # Daily sync
-0 2 * * * cd /path/to/model-lens && bun run sync-models
+0 2 * * * cd /path/to/effect-models && bun run sync-models
 
 # Hourly health check
-0 * * * * cd /path/to/model-lens && bun run check-sync-health
+0 * * * * cd /path/to/effect-models && bun run check-sync-health
 ```
 
 ### Option 3: Manual/On-Demand

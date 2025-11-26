@@ -1,6 +1,6 @@
 # Database Setup - Postgres + Drizzle ORM
 
-This document describes the PostgreSQL database setup for ModelLens
+This document describes the PostgreSQL database setup for Effect Models
 saved filters feature.
 
 ## Prerequisites
@@ -16,7 +16,7 @@ saved filters feature.
 Create a `.env.local` file in the project root:
 
 ```bash
-DATABASE_URL=postgres://postgres:password@localhost:5432/modellens
+DATABASE_URL=postgres://postgres:password@localhost:5432/effect-models
 ```
 
 **Production example:**
@@ -234,10 +234,10 @@ ERROR: permission denied for database
 **Solution:** Grant proper permissions or create database:
 ```bash
 # Create database
-createdb modellens
+createdb effect-models
 
 # Or with psql
-psql -U postgres -c "CREATE DATABASE modellens;"
+psql -U postgres -c "CREATE DATABASE \"effect-models\";"
 ```
 
 ### Extension not available
@@ -272,12 +272,12 @@ if re-running the migration.
 # Start local Postgres
 docker run --name modellens-db \
   -e POSTGRES_PASSWORD=password \
-  -e POSTGRES_DB=modellens \
+  -e POSTGRES_DB=effect-models \
   -p 5432:5432 \
   -d postgres:15
 
 # Set env var
-export DATABASE_URL=postgres://postgres:password@localhost:5432/modellens
+export DATABASE_URL=postgres://postgres:password@localhost:5432/effect-models
 
 # Run migrations
 psql $DATABASE_URL -f db/migrations/0001_create_saved_filters.sql
@@ -319,7 +319,7 @@ psql $DATABASE_URL -f db/migrations/0001_create_saved_filters.sql
 ## File Structure
 
 ```
-model-lens/
+effect-models/
 ├── db/
 │   └── migrations/
 │       └── 0001_create_saved_filters.sql  # Schema migration

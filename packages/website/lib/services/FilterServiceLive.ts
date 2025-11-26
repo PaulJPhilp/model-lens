@@ -1,5 +1,5 @@
-import "server-only"
 import { Effect, Layer } from "effect"
+import "server-only"
 import type { Model } from "../types"
 import { FilterService, type Filters } from "./FilterService"
 
@@ -99,6 +99,20 @@ export const FilterServiceLive = Layer.succeed(FilterService, {
 				supportsTemperature: filters.supportsTemperature ?? null,
 				supportsAttachments: filters.supportsAttachments ?? null,
 			}
+
+			if (validated.inputCostRange[0] > validated.inputCostRange[1]) {
+				validated.inputCostRange = [0, 1000]
+			}
+			if (validated.outputCostRange[0] > validated.outputCostRange[1]) {
+				validated.outputCostRange = [0, 1000]
+			}
+			if (validated.cacheReadCostRange[0] > validated.cacheReadCostRange[1]) {
+				validated.cacheReadCostRange = [0, 1000]
+			}
+			if (validated.cacheWriteCostRange[0] > validated.cacheWriteCostRange[1]) {
+				validated.cacheWriteCostRange = [0, 1000]
+			}
+
 			return validated
 		}),
 })

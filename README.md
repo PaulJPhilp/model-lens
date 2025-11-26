@@ -1,4 +1,4 @@
-# Model Lens
+# Effect Models
 
 A comprehensive database and comparison tool for AI models, aggregating data from multiple sources to help users discover and evaluate AI models.
 

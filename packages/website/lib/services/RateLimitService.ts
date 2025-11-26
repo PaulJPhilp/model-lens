@@ -33,7 +33,7 @@ export const apiRateLimiter = new Ratelimit({
 	redis,
 	limiter: Ratelimit.slidingWindow(100, "1 m"), // 100 requests per minute
 	analytics: true,
-	prefix: "model-lens-api",
+	prefix: "effect-models-api",
 })
 
 // Strict rate limiter for admin routes
@@ -41,7 +41,7 @@ export const adminRateLimiter = new Ratelimit({
 	redis,
 	limiter: Ratelimit.slidingWindow(10, "1 m"), // 10 requests per minute
 	analytics: true,
-	prefix: "model-lens-admin",
+	prefix: "effect-models-admin",
 })
 
 // Rate limiter for model fetching (heavier operations)
@@ -49,7 +49,7 @@ export const modelFetchRateLimiter = new Ratelimit({
 	redis,
 	limiter: Ratelimit.slidingWindow(20, "1 m"), // 20 requests per minute
 	analytics: true,
-	prefix: "model-lens-models",
+	prefix: "effect-models-models",
 })
 
 export const RateLimitServiceLive = Layer.succeed(RateLimitService, {
@@ -59,7 +59,7 @@ export const RateLimitServiceLive = Layer.succeed(RateLimitService, {
 				redis,
 				limiter: Ratelimit.slidingWindow(limit, `${window} s`),
 				analytics: true,
-				prefix: "model-lens-custom",
+				prefix: "effect-models-custom",
 			})
 
 			const result = yield* Effect.promise(() => ratelimit.limit(identifier))

@@ -87,7 +87,7 @@ All required files have been created and tested:
 cp .env.example .env.local
 
 # 2. Edit DATABASE_URL in .env.local
-# DATABASE_URL=postgres://postgres:password@localhost:5432/modellens
+# DATABASE_URL=postgres://postgres:password@localhost:5432/effect-models
 
 # 3. Run migration
 psql $DATABASE_URL -f db/migrations/0001_create_saved_filters.sql
@@ -123,7 +123,7 @@ All 9 unit tests passing:
 ## 📁 File Structure
 
 ```
-model-lens/
+effect-models/
 ├── .env.example                           # Environment template
 ├── db/
 │   └── migrations/
