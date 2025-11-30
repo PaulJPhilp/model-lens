@@ -1,85 +1,40 @@
+# Effect Models - Backend API Server
 
-# Effect Models 🧠
+A pure backend REST API for AI model discovery and comparison. Aggregates real-time data from multiple AI provider APIs and provides type-safe endpoints for querying 1000+ AI models from 50+ providers.
 
-ModelLens is an open-source REST API server for AI model discovery and comparison. It aggregates real-time data from multiple AI provider APIs and provides type-safe endpoints for querying, filtering, and analyzing 1000+ AI models from 50+ providers.
+## Features
 
-## ✨ Features
+- **Multi-Source Data Aggregation**: Fetches model data from models.dev, OpenRouter, HuggingFace, and ArtificialAnalysis
+- **Persistent Storage**: PostgreSQL database for storing aggregated model data
+- **Real-time Sync**: Manual sync via CLI or API endpoints
+- **Type-Safe API**: Effect.js-powered backend with comprehensive error handling
+- **Caching**: Optional Redis caching for improved performance
+- **Simple REST Interface**: Clean API endpoints for model queries
 
-### 🌐 **Multi-Source Data Aggregation**
-- **models.dev**: Comprehensive marketplace data from 50+ providers
-- **OpenRouter**: Real-time routing and pricing information (326+ models)
-- **HuggingFace**: Popular open-source models with download metrics (100+ models)
-- **ArtificialAnalysis**: Intelligence benchmarking data (293+ models)
+## Tech Stack
 
-### 📊 **Advanced Filtering API**
-- **Saved Filters**: Create, update, and manage custom model filters
-- **Filter Evaluation**: Execute filters against live models with execution history
-- **Visibility Scopes**: Private, team-based, and public filter sharing
-- **Filter Runs**: Track evaluation history and results over time
-
-### 📋 **Model Management**
-- **REST Endpoints**: Type-safe endpoints for model exploration and discovery
-- **Pagination**: Efficient query results with page-based pagination
-- **Real-time Data**: Models fetched from live APIs on request
-- **Database Persistence**: PostgreSQL storage for filters and evaluation history
-
-### 🕒 **Automated Data Pipeline**
-- **Manual Sync Triggers**: Admin endpoint to trigger model data synchronization
-- **Sync History**: Track synchronization status and statistics
-- **Multiple Sources**: Aggregate data from 4 independent API sources
-- **Error Resilience**: Partial failure handling with retry logic
-
-## 🛠️ Tech Stack
-
-- **HTTP Framework**: Effect Platform HTTP (built on Effect.js)
-- **Language**: TypeScript 5.8+
+- **HTTP Framework**: Effect Platform HTTP (built on Effect.js 3.18+)
+- **Language**: TypeScript 5.8+ (strict mode)
 - **Runtime**: Bun 1.3+
-- **Functional Programming**: Effect.js 3.18+
 - **Database**: PostgreSQL with Drizzle ORM
-- **ORM**: Drizzle ORM 0.44+
-- **Testing**: Vitest 3.2+
-- **Code Quality**: Biome 2.2+
+- **Optional Caching**: Upstash Redis
+- **Testing**: Vitest
+- **Code Quality**: Biome
 
-## 📚 Documentation
-
-- **[API Documentation](docs/API.md)** - Complete REST API reference with examples
-- **[Architecture Guide](docs/Architecture.md)** - System design and implementation details
-- **[Database Setup](docs/DATABASE_SETUP.md)** - PostgreSQL configuration guide
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
+
 - **Bun** 1.3+ (required)
 - **PostgreSQL** 12+ database
-- **Node.js** compatible environment (Bun provides runtime)
-
-### Environment Variables
-
-Create a `.env.local` file in the `packages/website` directory:
-
-```env
-# Required
-DATABASE_URL=postgresql://username:password@localhost:5432/model_lens
-NODE_ENV=development
-PORT=3000
-
-# Optional - Caching (for production)
-UPSTASH_REDIS_REST_URL=https://your-redis-instance.upstash.io
-UPSTASH_REDIS_REST_TOKEN=your-upstash-token
-```
-
-**Security Notes:**
-- Never commit `.env.local` files to version control
-- Use environment-specific values for production
-- The API works without Redis but caching will be disabled
-- Use secret management services in production (Vercel Secrets, AWS Secrets Manager, etc.)
+- **Node.js** compatible environment
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/modellens.git
-   cd model-lens
+   git clone https://github.com/yourusername/effect-models.git
+   cd effect-models
    ```
 
 2. **Install dependencies**
@@ -90,11 +45,6 @@ UPSTASH_REDIS_REST_TOKEN=your-upstash-token
 3. **Set up the database**
    ```bash
    cd packages/website
-
-   # Generate database schema (if needed)
-   bun run db:generate
-
-   # Push schema to database (creates tables)
    bun run db:push
    ```
 
@@ -107,17 +57,12 @@ UPSTASH_REDIS_REST_TOKEN=your-upstash-token
 5. **Start the API server**
    ```bash
    cd packages/website
-   bun run src/server.ts
-   ```
-
-   Or use the dev command with hot reload:
-   ```bash
    bun run dev
    ```
 
 6. **Verify the server is running**
    ```bash
-   curl -H "x-user-id: test-user" http://localhost:3000/health
+   curl http://localhost:3000/health
    ```
 
    Expected response:
@@ -131,49 +76,50 @@ UPSTASH_REDIS_REST_TOKEN=your-upstash-token
 
 7. **Try the API**
    ```bash
-   curl -H "x-user-id: test-user" http://localhost:3000/v1/models?page=1&pageSize=10
+   curl http://localhost:3000/v1/models?limit=10
    ```
 
-## 📡 API Endpoints
+## Environment Variables
 
-All endpoints require the `x-user-id` header for authentication.
+Create a `.env.local` file in the `packages/website` directory:
 
-### Models
-- `GET /v1/models` - List all available models with pagination
+```env
+# Required
+DATABASE_URL=postgresql://username:password@localhost:5432/effect_models
+NODE_ENV=development
+PORT=3000
+
+# Optional - Caching (for production)
+UPSTASH_REDIS_REST_URL=https://your-redis-instance.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your-upstash-token
+
+# Configuration
+API_RETRY_MS=1000
+MODEL_SERVICE_RETRY_MS=1000
+```
+
+## API Endpoints
+
+### Public Endpoints
+
 - `GET /health` - Health check endpoint
+- `GET /v1/models` - List all aggregated models with pagination
 
-### Filters Management
-- `GET /v1/filters` - List filters accessible to user
-- `POST /v1/filters` - Create a new filter
-- `GET /v1/filters/:id` - Get specific filter details
-- `PUT /v1/filters/:id` - Update a filter (owner only)
-- `DELETE /v1/filters/:id` - Delete a filter (owner only)
+### Admin Endpoints
 
-### Filter Evaluation
-- `POST /v1/filters/:id/evaluate` - Evaluate filter against models
-- `GET /v1/filters/:id/runs` - List evaluation runs for a filter
-- `GET /v1/filters/:id/runs/:runId` - Get specific evaluation run
+Admin endpoints require the `x-admin: true` header.
 
-### Admin Operations
-- `POST /v1/admin/sync` - Trigger manual model data sync (admin only)
-- `GET /v1/admin/sync/history` - View sync history and status (admin only)
+- `POST /v1/admin/sync` - Trigger manual model data sync
+- `GET /v1/admin/sync/history` - View sync history and status
 
 See [API Documentation](docs/API.md) for complete endpoint reference with examples.
 
-## 🔄 Data Synchronization
+## Data Synchronization
 
-ModelLens keeps model data fresh through multiple sync mechanisms:
-
-### API-Triggered Sync
-Trigger synchronization via the API endpoint (requires admin privileges):
-
-```bash
-curl -X POST "http://localhost:3000/v1/admin/sync" \
-  -H "x-user-id: admin-user" \
-  -H "x-admin: true"
-```
+Keep model data fresh through multiple sync mechanisms:
 
 ### Manual Sync via CLI
+
 Run synchronization directly from the command line:
 
 ```bash
@@ -181,83 +127,39 @@ cd packages/website
 bun run sync-models
 ```
 
-### Automated Sync (Cron)
-Set up automated daily synchronization:
+### API-Triggered Sync
+
+Trigger synchronization via the API endpoint (requires admin):
 
 ```bash
-# Daily sync at 2 AM UTC
-0 2 * * * cd /path/to/model-lens/packages/website && bun run sync-models
+curl -X POST "http://localhost:3000/v1/admin/sync" \
+  -H "x-admin: true"
 ```
 
-### Monitor Sync Status
-Check synchronization history and health:
+### Check Sync Status
 
 ```bash
-# View last 10 sync operations
-curl -H "x-user-id: admin-user" \
-     -H "x-admin: true" \
-     "http://localhost:3000/v1/admin/sync/history?limit=10"
+cd packages/website
+bun run check-sync-health
 ```
 
-## 📊 Data Sources
+### View Sync History
 
-### Primary Sources (Live API)
-- **models.dev**: Marketplace pricing and specifications
-- **OpenRouter**: Real-time availability and routing
-- **HuggingFace**: Open-source model popularity metrics
-
-### Analytics Sources (Database)
-- **ArtificialAnalysis**: Intelligence indices and performance benchmarks
-
-## 🏗️ Architecture
-
-ModelLens is a pure backend API server using Effect.js for functional programming and type safety:
-
-```
-┌────────────────────────────────────────────────────────────────┐
-│                     REST API Server (Effect Platform HTTP)      │
-│                                                                  │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────┐  │
-│  │ /v1/models       │  │ /v1/filters      │  │ /v1/admin    │  │
-│  │ • GET /models    │  │ • GET /filters   │  │ • POST /sync │  │
-│  │ • Pagination     │  │ • POST /filters  │  │ • GET /history
-│  │ • Live data      │  │ • Filter runs    │  │              │  │
-│  └──────────────────┘  └──────────────────┘  └──────────────┘  │
-│            │                    │                      │         │
-│            └────────────────────┼──────────────────────┘         │
-│                                 ▼                                │
-│                    ┌────────────────────────┐                    │
-│                    │   Service Layer        │                    │
-│                    │ (Effect.Service)       │                    │
-│                    │                        │                    │
-│                    │ • ModelService         │                    │
-│                    │ • FilterService        │                    │
-│                    │ • CacheService         │                    │
-│                    │ • RateLimitService     │                    │
-│                    └────────────────────────┘                    │
-└────────────────────────────────────────────────────────────────┘
-                                 │
-                ┌────────────────┼────────────────┐
-                ▼                ▼                ▼
-        ┌─────────────┐  ┌──────────────┐  ┌─────────────┐
-        │  PostgreSQL │  │   External   │  │   Cache     │
-        │  Database   │  │     APIs     │  │  (Upstash)  │
-        │             │  │              │  │             │
-        │ • Filters   │  │ • models.dev │  │ • Redis     │
-        │ • Runs      │  │ • OpenRouter │  │ • TTL-based │
-        │ • Analytics │  │ • HuggingFace│  │             │
-        │             │  │ • ArtAnalysis│  │             │
-        └─────────────┘  └──────────────┘  └─────────────┘
+```bash
+curl "http://localhost:3000/v1/admin/sync/history?limit=10" \
+  -H "x-admin: true"
 ```
 
-**Technology Stack:**
-- **HTTP Framework**: Effect Platform HTTP (Effect.js built-in)
-- **Functional Programming**: Effect.js for error handling and dependency injection
-- **Database**: PostgreSQL with Drizzle ORM for type-safe queries
-- **Concurrency**: Effect.js for managing concurrent API calls with retry logic
-- **Testing**: Vitest for unit and integration tests
+## Data Sources
 
-## 🔧 Development
+Effect Models aggregates data from:
+
+1. **models.dev** - Marketplace pricing and specifications
+2. **OpenRouter** - Real-time availability and routing
+3. **HuggingFace** - Open-source model popularity metrics
+4. **ArtificialAnalysis** - Performance benchmarks
+
+## Development
 
 ### Running the Server
 
@@ -272,6 +174,7 @@ bun run src/server.ts
 ```
 
 ### Database Operations
+
 ```bash
 cd packages/website
 
@@ -283,9 +186,13 @@ bun run db:push
 
 # Reset database (caution: deletes all data)
 bun run db:reset
+
+# Interactive database CLI
+bun run db
 ```
 
 ### Testing
+
 ```bash
 cd packages/website
 
@@ -300,10 +207,11 @@ bun run test:coverage
 ```
 
 ### Code Quality
+
 ```bash
 cd packages/website
 
-# Lint and format code with Biome
+# Lint and format code
 bun run lint
 
 # Type checking
@@ -311,6 +219,7 @@ bun run check
 ```
 
 ### Building
+
 ```bash
 cd packages/website
 
@@ -321,7 +230,48 @@ bun run build
 bun run start
 ```
 
-## 🚢 Deployment
+## Architecture
+
+Effect Models is a pure backend API server using Effect.js for functional programming and type safety:
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                     REST API Server (Effect Platform HTTP)      │
+│                                                                  │
+│  ┌──────────────────┐  ┌────────────────────────┐               │
+│  │ /health          │  │ /v1/admin              │               │
+│  │ /v1/models       │  │ • POST /sync           │               │
+│  │ • GET /models    │  │ • GET /sync/history    │               │
+│  │ • Pagination     │  │                        │               │
+│  │ • Live data      │  │                        │               │
+│  └──────────────────┘  └────────────────────────┘               │
+│            │                    │                                │
+│            └────────────────────┼────────────────────┐           │
+│                                 ▼                    ▼            │
+│                    ┌────────────────────────┐      │             │
+│                    │   Service Layer        │      │             │
+│                    │ (Effect.Service)       │      │             │
+│                    │                        │      │             │
+│                    │ • ModelService         │      │             │
+│                    │ • ModelDataService     │      │             │
+│                    │ • CacheService         │      │             │
+│                    │ • RateLimitService     │      │             │
+│                    └────────────────────────┘      │             │
+└────────────────────────────────────────────────────┼─────────────┘
+                                                      │
+                ┌──────────────────────────────────────┼──────────────┐
+                ▼                                      ▼              ▼
+        ┌─────────────┐  ┌────────────────────┐  ┌─────────────┐
+        │  PostgreSQL │  │   External APIs    │  │   Cache     │
+        │  Database   │  │                    │  │  (Upstash)  │
+        │             │  │ • models.dev       │  │             │
+        │ • Models    │  │ • OpenRouter       │  │ • Redis     │
+        │ • Syncs     │  │ • HuggingFace      │  │ • TTL-based │
+        │             │  │ • ArtAnalysis      │  │             │
+        └─────────────┘  └────────────────────┘  └─────────────┘
+```
+
+## Deployment
 
 ### Self-Hosted (Recommended)
 
@@ -333,7 +283,7 @@ bun run start
 
 2. **Set production environment variables**
    ```bash
-   export DATABASE_URL="postgresql://prod-user:password@prod-host:5432/model_lens"
+   export DATABASE_URL="postgresql://prod-user:password@prod-host:5432/effect_models"
    export PORT=3000
    export NODE_ENV=production
    export UPSTASH_REDIS_REST_URL="https://your-production-redis.upstash.io"
@@ -350,13 +300,13 @@ bun run start
 
 ```bash
 # Build container
-docker build -t modellens .
+docker build -t effect-models .
 
 # Run with database
 docker run -p 3000:3000 \
-  -e DATABASE_URL="postgresql://user:password@db-host:5432/model_lens" \
+  -e DATABASE_URL="postgresql://user:password@db-host:5432/effect_models" \
   -e NODE_ENV=production \
-  modellens
+  effect-models
 ```
 
 ### Cloud Platforms
@@ -371,7 +321,7 @@ docker run -p 3000:3000 \
 - Ensure PostgreSQL database is accessible
 - Configure environment variables in deployment service
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/new-feature`
@@ -383,29 +333,11 @@ docker run -p 3000:3000 \
 8. Push to branch: `git push origin feature/new-feature`
 9. Submit a Pull Request
 
-### Adding New API Endpoints
-
-1. Create route handler in `src/routes/`
-2. Define request/response types
-3. Add validation using Zod or Effect Schema
-4. Create corresponding Effect.Service if needed
-5. Add tests in `tests/`
-6. Update API documentation in `docs/API.md`
-
-### Adding New Data Sources
-
-1. Create a new service in `lib/services/` extending `Effect.Service`
-2. Implement the data fetching and transformation logic
-3. Add to `lib/layers.ts` for dependency injection
-4. Update `ModelServiceLive.ts` to include new source
-5. Add tests for the new service
-6. Document the new data source in README and API docs
-
-## 📄 License
+## License
 
 MIT - see [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **models.dev** for comprehensive model marketplace data
 - **OpenRouter** for routing and pricing intelligence
@@ -414,8 +346,3 @@ MIT - see [LICENSE](LICENSE) file for details.
 - **Effect** team for the excellent functional programming library
 - **Bun** for high-performance JavaScript runtime and package manager
 - **Drizzle ORM** for type-safe database access
-- **Effect Platform HTTP** for type-safe REST server framework
-
----
-
-**ModelLens** - Open-source REST API for AI model discovery and comparison 🧠✨

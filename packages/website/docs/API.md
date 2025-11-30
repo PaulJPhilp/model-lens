@@ -1,8 +1,8 @@
-# ModelLens API Documentation
+# Effect Models API Documentation
 
 ## Overview
 
-The ModelLens API is a backend-only REST API server for AI model discovery and comparison. Built with **Effect-TS** and **Effect Platform HTTP**, it provides type-safe endpoints for managing and filtering AI models from multiple sources (models.dev, OpenRouter, HuggingFace, ArtificialAnalysis).
+The Effect Models API is a backend-only REST API server for AI model discovery and comparison. Built with **Effect.js** and **Effect Platform HTTP**, it provides type-safe endpoints for accessing aggregated AI model data from multiple sources (models.dev, OpenRouter, HuggingFace, ArtificialAnalysis).
 
 **Architecture**: Pure backend API server using Bun + Effect.js with PostgreSQL database and Drizzle ORM.
 
@@ -13,19 +13,13 @@ The ModelLens API is a backend-only REST API server for AI model discovery and c
 
 ## Authentication
 
-All endpoints require the `x-user-id` header for authentication. Optional headers:
-- `x-team-id`: For team-based access control
-- `x-admin`: Set to `true` for admin-only endpoints
+Admin endpoints require the `x-admin: true` header.
 
-### Required Headers
+### Optional Headers
 
 ```bash
-# All requests must include:
--H "x-user-id: <user-id>"
-
-# Optional headers:
--H "x-team-id: <team-id>"      # For team filters
--H "x-admin: true"             # For admin endpoints
+# Optional admin header for admin-only endpoints:
+-H "x-admin: true"
 ```
 
 ## Endpoints
@@ -52,17 +46,18 @@ curl "http://localhost:3000/health"
 
 ---
 
-### Models Management
+### Models
 
 #### GET /v1/models
 
-List all available AI models with pagination.
+List all aggregated AI models with pagination.
 
 **Query Parameters**:
 | Parameter | Type | Default | Max | Description |
 |-----------|------|---------|-----|-------------|
-| `page` | integer | 1 | - | Page number (1-indexed) |
-| `pageSize` | integer | 20 | 100 | Results per page |
+| `limit` | integer | 20 | 100 | Results per page |
+| `offset` | integer | 0 | - | Number of results to skip |
+| `provider` | string | - | - | Filter by provider name (optional) |
 
 **Response** (200 OK):
 ```json
@@ -73,15 +68,23 @@ List all available AI models with pagination.
       "name": "GPT-4",
       "provider": "OpenAI",
       "contextWindow": 128000,
-      "costPerToken": 0.03,
-      "releaseDate": "2023-03-14"
-      // ... additional model properties
+      "maxOutputTokens": 4096,
+      "inputCost": 0.03,
+      "outputCost": 0.06,
+      "modalities": ["text", "image"],
+      "capabilities": ["function-calling", "vision"],
+      "releaseDate": "2023-03-14",
+      "lastUpdated": "2025-01-27T12:00:00Z",
+      "openWeights": false,
+      "supportsTemperature": true,
+      "supportsAttachments": true,
+      "new": false
     }
   ],
   "meta": {
     "total": 1250,
-    "page": 1,
-    "pageSize": 20
+    "limit": 20,
+    "offset": 0
   },
   "timestamp": "2025-01-27T16:40:00.000Z"
 }
@@ -89,294 +92,18 @@ List all available AI models with pagination.
 
 **Example**:
 ```bash
-curl -H "x-user-id: user123" "http://localhost:3000/v1/models?page=1&pageSize=50"
-```
+# Get first 50 models
+curl "http://localhost:3000/v1/models?limit=50&offset=0"
 
----
+# Get next 50
+curl "http://localhost:3000/v1/models?limit=50&offset=50"
 
-### Filters Management
-
-#### GET /v1/filters
-
-List filters accessible to the current user.
-
-**Query Parameters**:
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `page` | integer | Page number |
-| `pageSize` | integer | Results per page (max 100) |
-| `visibility` | string | Filter by: `all`, `private`, `team`, `public` |
-
-**Response** (200 OK):
-```json
-{
-  "data": [
-    {
-      "id": "filter-123",
-      "name": "Fast Models",
-      "description": "Models with low latency",
-      "visibility": "private",
-      "ownerId": "user-123",
-      "rules": [
-        {
-          "field": "contextWindow",
-          "operator": "gte",
-          "value": 8000
-        }
-      ],
-      "usageCount": 5,
-      "createdAt": "2025-01-20T10:00:00Z",
-      "updatedAt": "2025-01-26T15:30:00Z"
-    }
-  ],
-  "meta": {
-    "total": 12,
-    "page": 1,
-    "pageSize": 20
-  },
-  "timestamp": "2025-01-27T16:40:00.000Z"
-}
-```
-
-**Example**:
-```bash
-curl -H "x-user-id: user123" "http://localhost:3000/v1/filters?visibility=private"
-```
-
----
-
-#### POST /v1/filters
-
-Create a new filter.
-
-**Request Body**:
-```json
-{
-  "name": "Affordable Models",
-  "description": "Models under $0.001 per 1k tokens",
-  "visibility": "private",
-  "rules": [
-    {
-      "field": "inputCost",
-      "operator": "lt",
-      "value": 0.001
-    }
-  ],
-  "teamId": "team-123"  // Optional, required if visibility is 'team'
-}
-```
-
-**Response** (200 OK):
-```json
-{
-  "data": {
-    "id": "filter-456",
-    "name": "Affordable Models",
-    "description": "Models under $0.001 per 1k tokens",
-    "visibility": "private",
-    "ownerId": "user-123",
-    "rules": [ /* ... */ ],
-    "usageCount": 0,
-    "createdAt": "2025-01-27T16:40:00Z",
-    "updatedAt": "2025-01-27T16:40:00Z"
-  },
-  "timestamp": "2025-01-27T16:40:00.000Z"
-}
-```
-
-**Example**:
-```bash
-curl -X POST "http://localhost:3000/v1/filters" \
-  -H "x-user-id: user123" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Affordable Models",
-    "visibility": "private",
-    "rules": [{"field": "inputCost", "operator": "lt", "value": 0.001}]
-  }'
-```
-
----
-
-#### GET /v1/filters/:id
-
-Get a specific filter by ID.
-
-**Path Parameters**:
-| Parameter | Description |
-|-----------|-------------|
-| `id` | Filter ID |
-
-**Response** (200 OK):
-```json
-{
-  "data": {
-    "id": "filter-123",
-    "name": "Fast Models",
-    "description": "...",
-    "visibility": "private",
-    "ownerId": "user-123",
-    "rules": [ /* ... */ ],
-    "usageCount": 5,
-    "createdAt": "2025-01-20T10:00:00Z",
-    "updatedAt": "2025-01-26T15:30:00Z"
-  },
-  "timestamp": "2025-01-27T16:40:00.000Z"
-}
+# Filter by provider
+curl "http://localhost:3000/v1/models?provider=OpenAI&limit=20"
 ```
 
 **Errors**:
-- `404 NOT_FOUND`: Filter doesn't exist
-- `403 FORBIDDEN`: No access to filter
-
-**Example**:
-```bash
-curl -H "x-user-id: user123" "http://localhost:3000/v1/filters/filter-123"
-```
-
----
-
-#### PUT /v1/filters/:id
-
-Update a filter (owner only).
-
-**Request Body** (all fields optional):
-```json
-{
-  "name": "Updated Name",
-  "description": "New description",
-  "visibility": "team",
-  "rules": [ /* ... */ ]
-}
-```
-
-**Response** (200 OK):
-```json
-{
-  "data": {
-    "id": "filter-123",
-    "name": "Updated Name",
-    // ... other fields
-    "updatedAt": "2025-01-27T17:00:00Z"
-  },
-  "timestamp": "2025-01-27T17:00:00.000Z"
-}
-```
-
-**Errors**:
-- `403 FORBIDDEN`: Not filter owner
-- `400 VALIDATION_ERROR`: Invalid field values
-
----
-
-#### DELETE /v1/filters/:id
-
-Delete a filter (owner only).
-
-**Response** (200 OK):
-```json
-{
-  "data": {
-    "deleted": true,
-    "id": "filter-123"
-  },
-  "timestamp": "2025-01-27T17:00:00.000Z"
-}
-```
-
----
-
-### Filter Evaluation
-
-#### POST /v1/filters/:id/evaluate
-
-Evaluate a filter against the latest models.
-
-**Response** (200 OK):
-```json
-{
-  "data": {
-    "runId": "run-789",
-    "matchCount": 45,
-    "totalEvaluated": 1250,
-    "durationMs": 350,
-    "results": [
-      {
-        "id": "openai/gpt-4",
-        "name": "GPT-4",
-        "provider": "OpenAI"
-        // ... model details
-      }
-    ]
-  },
-  "timestamp": "2025-01-27T17:00:00.000Z"
-}
-```
-
-**Example**:
-```bash
-curl -X POST "http://localhost:3000/v1/filters/filter-123/evaluate" \
-  -H "x-user-id: user123"
-```
-
----
-
-#### GET /v1/filters/:id/runs
-
-List all evaluation runs for a filter.
-
-**Query Parameters**:
-| Parameter | Type | Default |
-|-----------|------|---------|
-| `page` | integer | 1 |
-| `pageSize` | integer | 20 |
-
-**Response** (200 OK):
-```json
-{
-  "data": [
-    {
-      "id": "run-789",
-      "filterId": "filter-123",
-      "executedBy": "user-123",
-      "executedAt": "2025-01-27T17:00:00Z",
-      "durationMs": 350,
-      "matchCount": 45,
-      "totalEvaluated": 1250,
-      "results": [ /* ... */ ]
-    }
-  ],
-  "meta": {
-    "total": 15,
-    "page": 1,
-    "pageSize": 20
-  },
-  "timestamp": "2025-01-27T17:00:00.000Z"
-}
-```
-
----
-
-#### GET /v1/filters/:id/runs/:runId
-
-Get a specific filter evaluation run.
-
-**Response** (200 OK):
-```json
-{
-  "data": {
-    "id": "run-789",
-    "filterId": "filter-123",
-    "executedBy": "user-123",
-    "executedAt": "2025-01-27T17:00:00Z",
-    "durationMs": 350,
-    "matchCount": 45,
-    "totalEvaluated": 1250,
-    "results": [ /* ... */ ]
-  },
-  "timestamp": "2025-01-27T17:00:00.000Z"
-}
-```
+- `400 VALIDATION_ERROR`: Invalid parameters
 
 ---
 
@@ -389,7 +116,14 @@ Trigger manual model data synchronization (admin only).
 **Headers Required**:
 - `x-admin: true`
 
-**Response** (200 OK):
+**Request Body** (optional):
+```json
+{
+  // No body parameters required
+}
+```
+
+**Response** (202 Accepted):
 ```json
 {
   "data": {
@@ -402,14 +136,13 @@ Trigger manual model data synchronization (admin only).
 ```
 
 **Errors**:
-- `401 UNAUTHORIZED`: Missing/invalid authentication
 - `403 FORBIDDEN`: Admin privileges required
 
 **Example**:
 ```bash
 curl -X POST "http://localhost:3000/v1/admin/sync" \
-  -H "x-user-id: user123" \
-  -H "x-admin: true"
+  -H "x-admin: true" \
+  -H "Content-Type: application/json"
 ```
 
 ---
@@ -418,24 +151,35 @@ curl -X POST "http://localhost:3000/v1/admin/sync" \
 
 Get model synchronization history (admin only).
 
+**Headers Required**:
+- `x-admin: true`
+
 **Query Parameters**:
-| Parameter | Type | Default | Max |
-|-----------|------|---------|-----|
-| `limit` | integer | 10 | 100 |
+| Parameter | Type | Default | Max | Description |
+|-----------|------|---------|-----|-------------|
+| `limit` | integer | 10 | 100 | Number of records to return |
 
 **Response** (200 OK):
 ```json
 {
   "data": [
     {
-      "syncId": "sync_1706370000000",
-      "status": "started",
+      "id": "sync_1706370000000",
+      "status": "completed",
       "startedAt": "2025-01-27T17:00:00Z",
       "completedAt": "2025-01-27T17:15:30Z",
-      "modelsProcessed": 1250,
-      "newModels": 45,
-      "updatedModels": 123,
-      "failedFetches": 1
+      "totalFetched": 1250,
+      "totalStored": 1245,
+      "message": "Sync completed successfully"
+    },
+    {
+      "id": "sync_1706283600000",
+      "status": "completed",
+      "startedAt": "2025-01-26T17:00:00Z",
+      "completedAt": "2025-01-26T17:12:45Z",
+      "totalFetched": 1200,
+      "totalStored": 1198,
+      "message": "Sync completed successfully"
     }
   ],
   "meta": {
@@ -443,6 +187,20 @@ Get model synchronization history (admin only).
   },
   "timestamp": "2025-01-27T17:00:00.000Z"
 }
+```
+
+**Errors**:
+- `403 FORBIDDEN`: Admin privileges required
+
+**Example**:
+```bash
+# Get last 10 sync operations
+curl "http://localhost:3000/v1/admin/sync/history?limit=10" \
+  -H "x-admin: true"
+
+# Get last 50
+curl "http://localhost:3000/v1/admin/sync/history?limit=50" \
+  -H "x-admin: true"
 ```
 
 ---
@@ -466,13 +224,12 @@ All errors follow a standardized response format:
 
 | Code | Status | Description |
 |------|--------|-------------|
-| `UNAUTHORIZED` | 401 | Authentication required or invalid |
-| `FORBIDDEN` | 403 | User lacks permission for resource |
-| `RESOURCE_NOT_FOUND` | 404 | Resource doesn't exist |
 | `VALIDATION_ERROR` | 400 | Request validation failed |
 | `BAD_REQUEST` | 400 | Invalid request format |
+| `UNAUTHORIZED` | 401 | Authentication required or invalid |
+| `FORBIDDEN` | 403 | User lacks permission for resource |
+| `NOT_FOUND` | 404 | Resource doesn't exist |
 | `CONFLICT` | 409 | Resource already exists or state conflict |
-| `UNPROCESSABLE_ENTITY` | 422 | Semantic validation error |
 | `INTERNAL_SERVER_ERROR` | 500 | Server error |
 | `SERVICE_UNAVAILABLE` | 503 | Service temporarily unavailable |
 
@@ -482,14 +239,27 @@ All errors follow a standardized response format:
 {
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "Validation failed",
+    "message": "Invalid limit parameter",
     "details": {
-      "name": "name must be a non-empty string"
+      "limit": "must be between 1 and 100"
     }
   },
   "timestamp": "2025-01-27T17:00:00.000Z"
 }
 ```
+
+---
+
+## Data Sources
+
+The API aggregates model data from multiple sources:
+
+| Source | Data |
+|--------|------|
+| **models.dev** | Pricing, specifications, capabilities |
+| **OpenRouter** | Real-time availability, routing pricing |
+| **HuggingFace** | Open-source model metadata, download metrics |
+| **ArtificialAnalysis** | Intelligence benchmarks, performance evaluations |
 
 ---
 
@@ -499,10 +269,10 @@ All errors follow a standardized response format:
 
 ```bash
 # Development server with hot reload
-bun run src/server.ts
-
-# Or use the package.json script
 bun run dev
+
+# Or run directly
+bun run src/server.ts
 ```
 
 Server will start on `http://localhost:3000` by default.
@@ -510,14 +280,12 @@ Server will start on `http://localhost:3000` by default.
 ### Environment Variables
 
 ```env
-# Database
-DATABASE_URL=postgresql://username:password@localhost:5432/model_lens
+# Required
+DATABASE_URL=postgresql://username:password@localhost:5432/effect_models
 
-# Server
+# Optional
 PORT=3000
 NODE_ENV=development
-
-# Optional: Redis caching
 UPSTASH_REDIS_REST_URL=https://...
 UPSTASH_REDIS_REST_TOKEN=...
 ```
@@ -564,59 +332,35 @@ export const getModels = Effect.gen(function* () {
 ### Database Schema
 
 - **models** - AI model information from multiple sources
-- **saved_filters** - User-created filter definitions
-- **filter_runs** - Historical filter evaluation runs
-
----
-
-## Data Sources
-
-The API aggregates model data from:
-
-| Source | URL | Data |
-|--------|-----|------|
-| models.dev | `https://models.dev/api.json` | Pricing, specs, capabilities |
-| OpenRouter | `https://openrouter.ai/api/v1/models` | Availability, pricing |
-| HuggingFace | `https://huggingface.co/api/models` | Metadata, download counts |
-| ArtificialAnalysis | `https://artificialanalysis.ai/api/models` | Intelligence scores, evaluations |
+- **model_syncs** - Synchronization history and status
 
 ---
 
 ## API Examples
 
-### Example 1: Create and Evaluate a Filter
+### Example 1: List All Models
 
 ```bash
-# 1. Create a filter
-FILTER_ID=$(curl -X POST "http://localhost:3000/v1/filters" \
-  -H "x-user-id: user123" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Multimodal Models",
-    "description": "Models supporting both text and image",
-    "visibility": "private",
-    "rules": [{"field": "modalities", "operator": "includes", "value": "image"}]
-  }' | jq -r '.data.id')
+# Get first 20 models
+curl "http://localhost:3000/v1/models"
 
-# 2. Evaluate the filter
-curl -X POST "http://localhost:3000/v1/filters/$FILTER_ID/evaluate" \
-  -H "x-user-id: user123"
+# Get specific page
+curl "http://localhost:3000/v1/models?limit=50&offset=50"
 
-# 3. View evaluation results
-curl "http://localhost:3000/v1/filters/$FILTER_ID/runs" \
-  -H "x-user-id: user123"
+# Filter by provider
+curl "http://localhost:3000/v1/models?provider=OpenAI"
 ```
 
-### Example 2: List Models with Pagination
+### Example 2: Trigger Manual Sync
 
 ```bash
-# Get first 50 models
-curl "http://localhost:3000/v1/models?page=1&pageSize=50" \
-  -H "x-user-id: user123"
+# Trigger sync operation
+curl -X POST "http://localhost:3000/v1/admin/sync" \
+  -H "x-admin: true"
 
-# Get next page
-curl "http://localhost:3000/v1/models?page=2&pageSize=50" \
-  -H "x-user-id: user123"
+# Check sync status
+curl "http://localhost:3000/v1/admin/sync/history?limit=5" \
+  -H "x-admin: true"
 ```
 
 ---
@@ -634,21 +378,30 @@ Monitor the console output for detailed information during development.
 
 ---
 
-## Rate Limiting & Caching
+## Caching
 
-Currently:
-- **No rate limiting** (to be added in production)
 - **Database caching** of model data
-- **In-memory caching** of frequent queries via Upstash Redis (optional)
+- **In-memory caching** via Upstash Redis (optional, for production)
+- **TTL-based expiration** for cached data
+
+---
+
+## Rate Limiting
+
+Currently no rate limiting is implemented. For production deployments, consider implementing:
+
+- Rate limiting per IP address
+- Rate limiting per admin user
+- Exponential backoff for external API calls
 
 ---
 
 ## Future Enhancements
 
-- [ ] Rate limiting per user/IP
+- [ ] Rate limiting per IP/user
 - [ ] Webhooks for data updates
 - [ ] GraphQL interface
 - [ ] Batch operations
-- [ ] Advanced filter syntax
+- [ ] Advanced search syntax
 - [ ] Custom model transformations
 - [ ] Historical trend analysis

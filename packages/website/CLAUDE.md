@@ -1,13 +1,13 @@
-# CLAUDE.md - ModelLens Backend API Server
+# CLAUDE.md - Effect Models Backend API Server
 
-This file provides guidance for Claude Code when working on the ModelLens backend API server codebase.
+This file provides guidance for Claude Code when working on the Effect Models backend API server codebase.
 
 ## Overview
 
-**ModelLens** is a pure backend REST API server for AI model discovery and comparison. It:
+**Effect Models** is a pure backend REST API server for AI model discovery and comparison. It:
 - Aggregates real-time data from 4 external APIs (models.dev, OpenRouter, HuggingFace, ArtificialAnalysis)
 - Provides type-safe REST endpoints using Effect Platform HTTP
-- Manages saved filters and filter evaluation runs with PostgreSQL
+- Stores aggregated model data in PostgreSQL
 - Implements functional programming patterns with Effect.js for error handling and dependency injection
 
 **Architecture**: Backend-only API server (no web UI, no Next.js)
@@ -26,19 +26,18 @@ packages/website/
 │   │   ├── index.ts                 # Database connection
 │   │   ├── schema.ts                # Table exports
 │   │   ├── schema.models.ts         # Models table
-│   │   ├── schema.filterRuns.ts     # Filter runs table
-│   │   ├── schema.filters.ts        # Saved filters table
 │   │   └── schema.syncHistory.ts    # Sync history table
 │   ├── lib/
-│   │   ├── services/                # Effect.Service implementations (23+ services)
+│   │   ├── services/                # Effect.Service implementations (6+ services)
 │   │   │   ├── ModelService.ts      # Service interface
 │   │   │   ├── ModelServiceLive.ts  # Live implementation
+│   │   │   ├── ModelDataService.ts  # Data fetching
 │   │   │   ├── CacheService.ts      # Redis caching
-│   │   │   ├── FilterService.ts     # Filter logic
 │   │   │   └── ... (other services)
 │   │   ├── middleware/              # Authentication & validation
-│   │   │   ├── auth.ts              # requireAuth middleware
-│   │   │   └── admin.ts             # Admin check
+│   │   │   ├── logger.ts
+│   │   │   ├── cors.ts
+│   │   │   └── error-handler.ts
 │   │   ├── http/                    # HTTP utilities
 │   │   │   ├── responses.ts         # Response formatting
 │   │   │   └── pagination.ts        # Pagination helpers
@@ -49,19 +48,17 @@ packages/website/
 │   │   └── transformers/            # Data transformation
 │   ├── routes/                      # API route handlers
 │   │   ├── models.ts                # GET /v1/models
-│   │   ├── filters.ts               # GET/POST /v1/filters
-│   │   ├── filter-detail.ts         # GET/PUT/DELETE /v1/filters/:id
-│   │   ├── filter-evaluate.ts       # POST /v1/filters/:id/evaluate
-│   │   ├── filter-runs.ts           # GET /v1/filters/:id/runs*
 │   │   └── admin-sync.ts            # POST/GET /v1/admin/sync*
-│   ├── middleware/                  # Express-like middleware
-│   │   └── auth.ts                  # Authentication
+│   ├── middleware/                  # HTTP middleware
+│   │   ├── logger.ts
+│   │   ├── cors.ts
+│   │   └── error-handler.ts
 │   └── scripts/                     # CLI scripts
-│       └── sync-models.ts           # Manual data sync
+│       ├── sync-models.ts           # Manual data sync
+│       └── check-sync-health.ts     # Health check
 ├── tests/                           # Test files
 │   ├── api/                         # API route tests
-│   ├── services/                    # Service tests
-│   └── setup/                       # Test configuration
+│   └── services/                    # Service tests
 ├── docs/                            # Documentation
 │   ├── API.md                       # REST API reference
 │   ├── Architecture.md              # System design
@@ -71,7 +68,6 @@ packages/website/
 ├── tsconfig.json
 ├── vitest.config.ts
 ├── drizzle.config.ts
-├── next.config.js                   # Kept for compatibility but unused
 └── README.md
 ```
 
@@ -119,6 +115,15 @@ bun run test:coverage
 bun run test -- tests/api/models.test.ts
 ```
 
+### Data Operations
+```bash
+# Sync models from all APIs
+bun run sync-models
+
+# Check sync health status
+bun run check-sync-health
+```
+
 ### Code Quality
 ```bash
 # Type check
@@ -156,18 +161,14 @@ All error responses follow this format:
 }
 ```
 
-### Authentication
+### Admin Authentication
 
-All endpoints require the `x-user-id` header. Optional headers:
-- `x-team-id`: For team-based access control
-- `x-admin: true`: For admin-only endpoints
-
-Use the `requireAuth()` middleware to validate:
+Admin endpoints require the `x-admin: true` header. Use the `requireAdmin()` middleware to validate:
 ```typescript
-const auth = yield* requireAuth(request)
-// auth.userId: string
-// auth.teamId: string | undefined
-// auth.isAdmin: boolean
+const isAdmin = request.headers.get("x-admin") === "true"
+if (!isAdmin) {
+  return yield* unauthorizedError("Admin access required")
+}
 ```
 
 ### Service Pattern (Effect.js)
@@ -193,7 +194,6 @@ const getModels = HttpRouter.get(
   "/v1/models",
   (Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest
-    const auth = yield* requireAuth(request)
     const modelService = yield* ModelService
 
     const models = yield* modelService.fetchModels()
@@ -243,7 +243,7 @@ const handler = Effect.gen(function* () {
   const url = request.url
   const method = request.method
 
-  // Parse JSON body (it's a property, not a method)
+  // Parse JSON body
   const body = (yield* request.json) as any
 
   // Return response
@@ -276,27 +276,11 @@ const handler = Effect.gen(function* () {
 - releaseDate, lastUpdated
 - And 10+ other model properties
 
-### saved_filters
-- id (string, primary key)
-- ownerId, teamId
-- name, description
-- visibility ('private' | 'team' | 'public')
-- rules (JSON array of filter conditions)
-- createdAt, updatedAt
-
-### filter_runs
-- id (string, primary key)
-- filterId (foreign key)
-- executedBy, executedAt
-- matchCount, totalEvaluated
-- results (JSON array of matched models)
-- durationMs
-
-### sync_history
+### model_syncs (sync history)
 - id (string, primary key)
 - status, message
 - startedAt, completedAt
-- modelsProcessed, newModels, updatedModels
+- totalFetched, totalStored
 
 ## Common Development Tasks
 
@@ -311,7 +295,6 @@ const getResource = HttpRouter.get(
   "/v1/resource",
   (Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest
-    const auth = yield* requireAuth(request)
     // Implementation
     return yield* createSuccessResponse(data)
   }) as any)
@@ -403,12 +386,7 @@ const handler = HttpRouter.get(
 )
 ```
 
-2. **Generic method calls**: Cast service before calling:
-```typescript
-const cached = yield* (cacheService.get as any)(CACHE_KEYS.MODELS)
-```
-
-3. **Router composition**: Cast after concat:
+2. **Router composition**: Cast after concat:
 ```typescript
 app = HttpRouter.concat(app, router as any)
 ```
@@ -428,7 +406,7 @@ These are temporary workarounds. As Effect Platform HTTP matures, these casts ca
 
 ### Environment Variables for Production
 ```env
-DATABASE_URL=postgresql://user:password@host:5432/model_lens
+DATABASE_URL=postgresql://user:password@host:5432/effect_models
 NODE_ENV=production
 PORT=3000
 UPSTASH_REDIS_REST_URL=https://...
@@ -440,7 +418,7 @@ UPSTASH_REDIS_REST_TOKEN=...
 ### Test Structure
 - **Unit tests**: Test individual functions in isolation
 - **Integration tests**: Test services with real database/APIs
-- **API tests**: Test HTTP endpoints with curl or test client
+- **API tests**: Test HTTP endpoints
 
 ### Running Tests
 ```bash
@@ -462,7 +440,7 @@ bun run test -- --grep "should list models"
 
 ### Test Environment
 - **Framework**: Vitest
-- **Environment**: Node.js (jsdom not needed for backend)
+- **Environment**: Node.js
 - **Database**: Use test database or in-memory alternatives
 - **APIs**: Mock or use test instances
 
@@ -518,9 +496,9 @@ bun --inspect-brk run src/server.ts
 
 - [ ] WebSocket support for real-time updates
 - [ ] GraphQL interface alongside REST API
-- [ ] Advanced filter syntax with DSL
-- [ ] Webhook notifications for filter matches
-- [ ] Rate limiting per user/team
+- [ ] Advanced filtering/search syntax
+- [ ] Webhook notifications for model updates
+- [ ] Rate limiting per IP/user
 - [ ] API key authentication (in addition to headers)
 - [ ] Batch operations for bulk updates
 - [ ] Custom model transformations
