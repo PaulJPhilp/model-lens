@@ -24,8 +24,7 @@
 		"db:generate": "drizzle-kit generate",
 		"db:push": "drizzle-kit push",
 		"sync-models": "bun run src/scripts/sync-models.ts",
-		"check-sync-health": "bun run src/scripts/check-sync-health.ts",
-		"analytics": "bun run src/scripts/analytics.ts"
+		"check-sync-health": "bun run src/scripts/check-sync-health.ts"
 	},
 	"dependencies": {
 		"@effect/platform": "^0.75.0",

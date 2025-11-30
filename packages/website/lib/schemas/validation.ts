@@ -122,64 +122,6 @@ export const GetSyncHistoryResponseSchema = Schema.Struct({
 	error: Schema.optional(Schema.String),
 })
 
-// Filter schemas
-export const FilterRuleSchema = Schema.Struct({
-	field: Schema.String,
-	operator: Schema.Union(
-		Schema.Literal("eq"),
-		Schema.Literal("ne"),
-		Schema.Literal("gt"),
-		Schema.Literal("gte"),
-		Schema.Literal("lt"),
-		Schema.Literal("lte"),
-		Schema.Literal("in"),
-		Schema.Literal("not_in"),
-		Schema.Literal("contains"),
-		Schema.Literal("starts_with"),
-		Schema.Literal("ends_with"),
-	),
-	value: Schema.Unknown, // Can be string, number, boolean, or array
-})
-
-export const CreateFilterRequestSchema = Schema.Struct({
-	name: Schema.String.pipe(Schema.minLength(1), Schema.maxLength(255)),
-	description: Schema.optional(Schema.String.pipe(Schema.maxLength(1000))),
-	visibility: Schema.Union(
-		Schema.Literal("private"),
-		Schema.Literal("team"),
-		Schema.Literal("public"),
-	),
-	rules: Schema.Array(FilterRuleSchema),
-	teamId: Schema.optional(Schema.String),
-})
-
-export const UpdateFilterRequestSchema = Schema.Struct({
-	name: Schema.optional(
-		Schema.String.pipe(Schema.minLength(1), Schema.maxLength(255)),
-	),
-	description: Schema.optional(Schema.String.pipe(Schema.maxLength(1000))),
-	visibility: Schema.optional(
-		Schema.Union(
-			Schema.Literal("private"),
-			Schema.Literal("team"),
-			Schema.Literal("public"),
-		),
-	),
-	rules: Schema.optional(Schema.Array(FilterRuleSchema)),
-})
-
-export const FilterResponseSchema = Schema.Struct({
-	id: Schema.String,
-	name: Schema.String,
-	description: Schema.optional(Schema.String),
-	visibility: Schema.String,
-	ownerId: Schema.String,
-	teamId: Schema.optional(Schema.String),
-	rules: Schema.Array(FilterRuleSchema),
-	createdAt: Schema.String,
-	updatedAt: Schema.String,
-})
-
 // Validation helper functions
 export function validateRequest<T>(
 	schema: Schema.Schema<T, unknown>,
@@ -213,11 +155,3 @@ export type GetSyncHistoryRequest = Schema.Schema.Type<
 export type GetSyncHistoryResponse = Schema.Schema.Type<
 	typeof GetSyncHistoryResponseSchema
 >
-export type FilterRule = Schema.Schema.Type<typeof FilterRuleSchema>
-export type CreateFilterRequest = Schema.Schema.Type<
-	typeof CreateFilterRequestSchema
->
-export type UpdateFilterRequest = Schema.Schema.Type<
-	typeof UpdateFilterRequestSchema
->
-export type FilterResponse = Schema.Schema.Type<typeof FilterResponseSchema>
