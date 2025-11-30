@@ -12,10 +12,6 @@ import { createErrorHandler } from "./middleware/error-handler"
 
 // Import all routers
 import { modelsRouter } from "./routes/models"
-import { filtersRouter } from "./routes/filters"
-import { filterDetailRouter } from "./routes/filter-detail"
-import { filterEvaluateRouter } from "./routes/filter-evaluate"
-import { filterRunsRouter } from "./routes/filter-runs"
 import { adminSyncRouter } from "./routes/admin-sync"
 
 /**
@@ -34,10 +30,6 @@ const app = pipe(
   ),
   // Mount all route routers
   HttpRouter.concat(modelsRouter as any),
-  HttpRouter.concat(filtersRouter as any),
-  HttpRouter.concat(filterDetailRouter as any),
-  HttpRouter.concat(filterEvaluateRouter as any),
-  HttpRouter.concat(filterRunsRouter as any),
   HttpRouter.concat(adminSyncRouter as any),
   // 404 handler for undefined routes
   HttpRouter.all(
@@ -70,32 +62,15 @@ const port = parseInt(process.env.PORT || "3000", 10)
 /**
  * Start the server
  */
-console.log(`🚀 Model-Lens API Server starting on http://localhost:${port}`)
+console.log(`🚀 Effect Models API Server starting on http://localhost:${port}`)
 console.log("\n📚 API Endpoints:")
-console.log("\nHealth & Status:")
+console.log("\nPublic:")
 console.log("  GET  /health                           - Health check")
-
-console.log("\nModels:")
-console.log("  GET  /v1/models                        - List all models")
-
-console.log("\nFilters:")
-console.log("  GET  /v1/filters                       - List filters")
-console.log("  POST /v1/filters                       - Create filter")
-console.log("  GET  /v1/filters/:id                   - Get filter")
-console.log("  PUT  /v1/filters/:id                   - Update filter")
-console.log("  DELETE /v1/filters/:id                 - Delete filter")
-
-console.log("\nFilter Evaluation:")
-console.log("  POST /v1/filters/:id/evaluate          - Evaluate filter")
-console.log("  GET  /v1/filters/:id/runs              - List filter runs")
-console.log("  GET  /v1/filters/:id/runs/:runId       - Get specific run")
+console.log("  GET  /v1/models                        - List all aggregated models")
 
 console.log("\nAdmin (requires x-admin: true header):")
 console.log("  POST /v1/admin/sync                    - Trigger model sync")
-console.log("  GET  /v1/admin/sync/history            - Get sync history")
-
-console.log("\nAuthentication: Include x-user-id header with all requests")
-console.log("Optional: x-team-id and x-admin headers for team/admin features\n")
+console.log("  GET  /v1/admin/sync/history            - Get sync history\n")
 
 // Run the HTTP server with proper layer initialization
 const main = async () => {
