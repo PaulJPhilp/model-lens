@@ -1,5 +1,6 @@
 import { Effect, pipe } from "effect"
 import { HttpRouter, HttpServerRequest } from "@effect/platform"
+import { ParseResult } from "@effect/schema"
 import { ModelDataService } from "../../lib/services/ModelDataService"
 import { requireAuth, requireAdmin } from "../middleware/auth"
 import {
@@ -7,7 +8,9 @@ import {
   unauthorizedError,
   forbiddenError,
   internalServerError,
+  badRequestError,
 } from "../lib/http/responses"
+import { validateQueryParams, SyncHistoryQuerySchema } from "../../lib/schemas/validation"
 
 /**
  * POST /v1/admin/sync
@@ -78,11 +81,19 @@ const getSyncHistory = HttpRouter.get(
     // Check admin privileges
     yield* requireAdmin(request)
 
-    // Parse query parameters
+    // Parse and validate query parameters
     const searchParams = new URL(request.url).searchParams
-    const rawLimit = searchParams.get("limit")
-    const parsedLimit = parseInt(rawLimit || "10", 10)
-    const limit = Math.max(1, Math.min(100, Number.isNaN(parsedLimit) ? 10 : parsedLimit))
+    const validatedParams = yield* validateQueryParams(
+      SyncHistoryQuerySchema,
+      searchParams
+    ).pipe(
+      Effect.mapError(() =>
+        new Error("Invalid query parameters: limit must be between 1 and 100")
+      )
+    )
+
+    // Use validated limit or default to 10
+    const limit = validatedParams.limit ?? 10
 
     // Get service and history
     const service = yield* ModelDataService
@@ -93,6 +104,10 @@ const getSyncHistory = HttpRouter.get(
 
     return yield* createSuccessResponse(results, { total: history.length })
   }).pipe(
+    Effect.catchTags({
+      ParseError: () =>
+        badRequestError("Invalid query parameters: limit must be between 1 and 100"),
+    }),
     Effect.catchAll((error) =>
       internalServerError(
         error instanceof Error
