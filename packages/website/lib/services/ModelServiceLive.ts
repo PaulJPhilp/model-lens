@@ -88,282 +88,337 @@ function transformOpenRouterModel(openRouterModel: OpenRouterModel): Model {
 	}
 }
 
-export const ModelServiceLive = Layer.succeed(ModelService, {
-	fetchModels: Effect.gen(function* () {
-		// Check cache first
-		const cacheService = yield* CacheService
-		const cachedModels = yield* cacheService.get<Model[] | null>(CACHE_KEYS.MODELS)
+// ============================================================================
+// API Fetch Functions - Each handles one data source
+// ============================================================================
 
-		if (cachedModels !== null) {
-			console.log(
-				`🎯 [ModelService] Using cached models (${cachedModels.length} models)`,
-			)
-			return cachedModels
-		}
-
-		// Primary source: external APIs (live data)
-		console.log("🌐 [ModelService] Fetching fresh models from external APIs")
-
-		// Fetch from all sources with partial failure handling
-		const fetchResults: Array<
-			{ readonly _tag: "Right"; readonly right: Model[] } | { readonly _tag: "Left"; readonly left: Error }
-		> = yield* Effect.all(
-			[
-				Effect.either(
-					// Fetch from models.dev
-					withRetryAndLogging(
-						Effect.tryPromise({
-							try: () => fetch("https://models.dev/api.json"),
-							catch: (error) =>
-								new Error(
-									`Failed to fetch from models.dev: ${
-										error instanceof Error ? error.message : "Network error"
-									}`,
-								),
-						}).pipe(
-							Effect.flatMap((response) => {
-								if (!response.ok) {
-									return Effect.fail(
-										new Error(`models.dev returned ${response.status}`),
-									)
-								}
-								return Effect.tryPromise({
-									try: () => response.json(),
-									catch: (error) =>
-										new Error(
-											`Failed to parse models.dev response: ${
-												error instanceof Error ? error.message : "Parse error"
-											}`,
-										),
-								})
-							}),
-							Effect.flatMap((data) =>
-								Effect.try({
-									try: () => transformModelsDevResponse(data),
-									catch: (error) =>
-										Effect.fail(
-											new Error(
-												`Failed to transform models.dev data: ${
-													error instanceof Error
-														? error.message
-														: "Transform error"
-												}`,
-											),
-										),
-								}),
+/**
+ * Fetch models from models.dev API
+ * Returns either models array or error
+ */
+function fetchFromModelsdev() {
+	return withRetryAndLogging(
+		Effect.tryPromise({
+			try: () => fetch("https://models.dev/api.json"),
+			catch: (error) =>
+				new Error(
+					`Failed to fetch from models.dev: ${
+						error instanceof Error ? error.message : "Network error"
+					}`,
+				),
+		}).pipe(
+			Effect.flatMap((response) => {
+				if (!response.ok) {
+					return Effect.fail(
+						new Error(`models.dev returned ${response.status}`),
+					)
+				}
+				return Effect.tryPromise({
+					try: () => response.json(),
+					catch: (error) =>
+						new Error(
+							`Failed to parse models.dev response: ${
+								error instanceof Error ? error.message : "Parse error"
+							}`,
+						),
+				})
+			}),
+			Effect.flatMap((data) =>
+				Effect.try({
+					try: () => transformModelsDevResponse(data),
+					catch: (error) =>
+						Effect.fail(
+							new Error(
+								`Failed to transform models.dev data: ${
+									error instanceof Error
+										? error.message
+										: "Transform error"
+								}`,
 							),
 						),
-						"models.dev API fetch",
-					),
-				),
+				}),
+			),
+		),
+		"models.dev API fetch",
+	)
+}
 
-				Effect.either(
-					// Fetch from OpenRouter
-					withRetryAndLogging(
-						Effect.tryPromise({
-							try: () => fetch("https://openrouter.ai/api/v1/models"),
-							catch: (error) =>
-								new Error(
-									`Failed to fetch from OpenRouter: ${
-										error instanceof Error ? error.message : "Network error"
-									}`,
-								),
-						}).pipe(
-							Effect.flatMap((response) => {
-								if (!response.ok) {
-									return Effect.fail(
-										new Error(`OpenRouter returned ${response.status}`),
-									)
-								}
-								return Effect.tryPromise({
-									try: () => response.json(),
-									catch: (error) =>
-										new Error(
-											`Failed to parse OpenRouter response: ${
-												error instanceof Error ? error.message : "Parse error"
-											}`,
-										),
-								})
-							}),
-							Effect.flatMap((data) =>
-								Effect.try({
-									try: () => transformOpenRouterModel(data as OpenRouterModel),
-									catch: (error) =>
-										Effect.fail(
-											new Error(
-												`Failed to transform OpenRouter data: ${
-													error instanceof Error
-														? error.message
-														: "Transform error"
-												}`,
-											),
-										),
-								}),
+/**
+ * Fetch models from OpenRouter API
+ * Returns either models array or error
+ */
+function fetchFromOpenRouter() {
+	return withRetryAndLogging(
+		Effect.tryPromise({
+			try: () => fetch("https://openrouter.ai/api/v1/models"),
+			catch: (error) =>
+				new Error(
+					`Failed to fetch from OpenRouter: ${
+						error instanceof Error ? error.message : "Network error"
+					}`,
+				),
+		}).pipe(
+			Effect.flatMap((response) => {
+				if (!response.ok) {
+					return Effect.fail(
+						new Error(`OpenRouter returned ${response.status}`),
+					)
+				}
+				return Effect.tryPromise({
+					try: () => response.json(),
+					catch: (error) =>
+						new Error(
+							`Failed to parse OpenRouter response: ${
+								error instanceof Error ? error.message : "Parse error"
+							}`,
+						),
+				})
+			}),
+			Effect.flatMap((data) =>
+				Effect.try({
+					try: () => transformOpenRouterModel(data as OpenRouterModel),
+					catch: (error) =>
+						Effect.fail(
+							new Error(
+								`Failed to transform OpenRouter data: ${
+									error instanceof Error
+										? error.message
+										: "Transform error"
+								}`,
 							),
 						),
-						"OpenRouter API fetch",
-					),
-				),
+				}),
+			),
+		),
+		"OpenRouter API fetch",
+	)
+}
 
-				Effect.either(
-					// Fetch from HuggingFace
-					withRetryAndLogging(
-						Effect.tryPromise({
-							try: () =>
-								fetch(
-									"https://huggingface.co/api/models?limit=100&sort=downloads&direction=-1",
-								).then(async (res) => {
-									if (!res.ok) {
-										throw new Error(`HuggingFace returned ${res.status}`)
+/**
+ * Fetch models from HuggingFace API
+ * Returns either models array or error
+ */
+function fetchFromHuggingFace() {
+	return withRetryAndLogging(
+		Effect.tryPromise({
+			try: () =>
+				fetch(
+					"https://huggingface.co/api/models?limit=100&sort=downloads&direction=-1",
+				).then(async (res) => {
+					if (!res.ok) {
+						throw new Error(`HuggingFace returned ${res.status}`)
+					}
+					return res.json()
+				}),
+			catch: (error) =>
+				new Error(
+					`Failed to fetch from HuggingFace: ${
+						error instanceof Error ? error.message : "Network error"
+					}`,
+				),
+		}).pipe(
+			Effect.flatMap((data: unknown) =>
+				Effect.try({
+					try: () => transformHuggingFaceModel(data as Record<string, unknown>),
+					catch: (error) =>
+						Effect.fail(
+							new Error(
+								`Failed to transform HuggingFace data: ${
+									error instanceof Error
+										? error.message
+										: "Transform error"
+								}`,
+							),
+						),
+				}),
+			),
+		),
+		"HuggingFace API fetch",
+	)
+}
+
+/**
+ * Fetch models from ArtificialAnalysis CSV API
+ * Returns either models array or error
+ */
+function fetchFromArtificialAnalysis() {
+	return withRetryAndLogging(
+		Effect.tryPromise({
+			try: () =>
+				fetch("https://artificialanalysis.ai/api/datasets/96.csv").then(
+					async (res) => {
+						if (!res.ok) {
+							throw new Error(
+								`ArtificialAnalysis returned ${res.status}`,
+							)
+						}
+						return res.text()
+					},
+				),
+			catch: (error) =>
+				new Error(
+					`Failed to fetch from ArtificialAnalysis: ${
+						error instanceof Error ? error.message : "Network error"
+					}`,
+				),
+		}).pipe(
+			Effect.flatMap((csvText) =>
+				Effect.try({
+					try: () => {
+						const lines = csvText.trim().split("\n")
+						const headers = lines[0].split(",")
+
+						const models: Record<string, unknown>[] = []
+						for (let i = 1; i < lines.length; i++) {
+							const values = lines[i].split(",")
+							if (values.length >= headers.length) {
+								const model: Record<string, unknown> = {}
+								headers.forEach((header, index) => {
+									if (header === "intelligenceIndex") {
+										model[header] = parseFloat(values[index]) || 0
+									} else if (header === "isLabClaimedValue") {
+										model[header] =
+											values[index].toLowerCase() === "true"
+									} else {
+										model[header] = values[index]
 									}
-									return res.json()
-								}),
-							catch: (error) =>
-								new Error(
-									`Failed to fetch from HuggingFace: ${
-										error instanceof Error ? error.message : "Network error"
-									}`,
-								),
-						}).pipe(
-							Effect.flatMap((data: unknown) =>
-								Effect.try({
-									try: () => transformHuggingFaceModel(data as Record<string, unknown>),
-									catch: (error) =>
-										Effect.fail(
-											new Error(
-												`Failed to transform HuggingFace data: ${
-													error instanceof Error
-														? error.message
-														: "Transform error"
-												}`,
-											),
-										),
-								}),
+								})
+								models.push(model)
+							}
+						}
+						return models.map(transformArtificialAnalysisModel)
+					},
+					catch: (error) =>
+						Effect.fail(
+							new Error(
+								`Failed to transform ArtificialAnalysis data: ${
+									error instanceof Error
+										? error.message
+										: "Transform error"
+								}`,
 							),
 						),
-						"HuggingFace API fetch",
-					),
-				),
+				}),
+			),
+		),
+		"ArtificialAnalysis API fetch",
+	)
+}
 
-				Effect.either(
-					// Fetch from ArtificialAnalysis
-					withRetryAndLogging(
-						Effect.tryPromise({
-							try: () =>
-								fetch("https://artificialanalysis.ai/api/datasets/96.csv").then(
-									async (res) => {
-										if (!res.ok) {
-											throw new Error(
-												`ArtificialAnalysis returned ${res.status}`,
-											)
-										}
-										return res.text()
-									},
-								),
-							catch: (error) =>
-								new Error(
-									`Failed to fetch from ArtificialAnalysis: ${
-										error instanceof Error ? error.message : "Network error"
-									}`,
-								),
-						}).pipe(
-							Effect.flatMap((csvText) =>
-								Effect.try({
-									try: () => {
-										const lines = csvText.trim().split("\n")
-										const headers = lines[0].split(",")
+// ============================================================================
+// Result Processing Functions
+// ============================================================================
 
-										const models: Record<string, unknown>[] = []
-										for (let i = 1; i < lines.length; i++) {
-											const values = lines[i].split(",")
-											if (values.length >= headers.length) {
-												const model: Record<string, unknown> = {}
-												headers.forEach((header, index) => {
-													if (header === "intelligenceIndex") {
-														model[header] = parseFloat(values[index]) || 0
-													} else if (header === "isLabClaimedValue") {
-														model[header] =
-															values[index].toLowerCase() === "true"
-													} else {
-														model[header] = values[index]
-													}
-												})
-												models.push(model)
-											}
-										}
-										return models.map(transformArtificialAnalysisModel)
-									},
-									catch: (error) =>
-										Effect.fail(
-											new Error(
-												`Failed to transform ArtificialAnalysis data: ${
-													error instanceof Error
-														? error.message
-														: "Transform error"
-												}`,
-											),
-										),
-								}),
-							),
-						),
-						"ArtificialAnalysis API fetch",
-					),
-				),
-			],
-			{ concurrency: 4 },
+/**
+ * Fetch from all sources in parallel with partial failure handling
+ */
+function fetchFromAllSources() {
+	return Effect.all(
+		[
+			Effect.either(fetchFromModelsdev()),
+			Effect.either(fetchFromOpenRouter()),
+			Effect.either(fetchFromHuggingFace()),
+			Effect.either(fetchFromArtificialAnalysis()),
+		],
+		{ concurrency: 4 },
+	) as Effect.Effect<
+		Array<
+			| { readonly _tag: "Right"; readonly right: Model[] }
+			| { readonly _tag: "Left"; readonly left: Error }
+		>,
+		never,
+		never
+	>
+}
+
+/**
+ * Process and extract results from Either types, logging errors
+ */
+function processResults(
+	fetchResults: Array<
+		| { readonly _tag: "Right"; readonly right: Model[] }
+		| { readonly _tag: "Left"; readonly left: Error }
+	>,
+) {
+	const modelsDevModels =
+		fetchResults[0]._tag === "Right" ? fetchResults[0].right : []
+	const openRouterModels =
+		fetchResults[1]._tag === "Right" ? fetchResults[1].right : []
+	const huggingFaceModels =
+		fetchResults[2]._tag === "Right" ? fetchResults[2].right : []
+	const artificialAnalysisModels =
+		fetchResults[3]._tag === "Right" ? fetchResults[3].right : []
+
+	// Log any failures
+	if (fetchResults[0]._tag === "Left") {
+		console.error(
+			"❌ [ModelService] models.dev fetch failed:",
+			fetchResults[0].left.message,
 		)
-
-		// Process results and collect any errors
-		const modelsDevModels =
-			fetchResults[0]._tag === "Right" ? fetchResults[0].right : []
-		const openRouterModels =
-			fetchResults[1]._tag === "Right" ? fetchResults[1].right : []
-		const huggingFaceModels =
-			fetchResults[2]._tag === "Right" ? fetchResults[2].right : []
-		const artificialAnalysisModels =
-			fetchResults[3]._tag === "Right" ? fetchResults[3].right : []
-
-		// Log any failures
-		if (fetchResults[0]._tag === "Left") {
-			console.error(
-				"❌ [ModelService] models.dev fetch failed:",
-				fetchResults[0].left.message,
-			)
-		}
-		if (fetchResults[1]._tag === "Left") {
-			console.error(
-				"❌ [ModelService] OpenRouter fetch failed:",
-				fetchResults[1].left.message,
-			)
-		}
-		if (fetchResults[2]._tag === "Left") {
-			console.error(
-				"❌ [ModelService] HuggingFace fetch failed:",
-				fetchResults[2].left.message,
-			)
-		}
-		if (fetchResults[3]._tag === "Left") {
-			console.error(
-				"❌ [ModelService] ArtificialAnalysis fetch failed:",
-				fetchResults[3].left.message,
-			)
-		}
-
-		const allModels = [
-			...modelsDevModels,
-			...openRouterModels,
-			...huggingFaceModels,
-			...artificialAnalysisModels,
-		]
-		console.log(
-			`✅ [ModelService] Fetched ${allModels.length} models from external APIs (${modelsDevModels.length} from models.dev, ${openRouterModels.length} from OpenRouter, ${huggingFaceModels.length} from HuggingFace, ${artificialAnalysisModels.length} from ArtificialAnalysis)`,
+	}
+	if (fetchResults[1]._tag === "Left") {
+		console.error(
+			"❌ [ModelService] OpenRouter fetch failed:",
+			fetchResults[1].left.message,
 		)
+	}
+	if (fetchResults[2]._tag === "Left") {
+		console.error(
+			"❌ [ModelService] HuggingFace fetch failed:",
+			fetchResults[2].left.message,
+		)
+	}
+	if (fetchResults[3]._tag === "Left") {
+		console.error(
+			"❌ [ModelService] ArtificialAnalysis fetch failed:",
+			fetchResults[3].left.message,
+		)
+	}
 
-		// Cache the results
+	const allModels = [
+		...modelsDevModels,
+		...openRouterModels,
+		...huggingFaceModels,
+		...artificialAnalysisModels,
+	]
+
+	console.log(
+		`✅ [ModelService] Fetched ${allModels.length} models from external APIs (${modelsDevModels.length} from models.dev, ${openRouterModels.length} from OpenRouter, ${huggingFaceModels.length} from HuggingFace, ${artificialAnalysisModels.length} from ArtificialAnalysis)`,
+	)
+
+	return {
+		allModels,
+		modelsDevModels,
+		openRouterModels,
+		huggingFaceModels,
+		artificialAnalysisModels,
+	}
+}
+
+/**
+ * Cache the combined results
+ */
+function cacheResults(
+	cacheService: Awaited<typeof CacheService>,
+	allModels: Model[],
+) {
+	return Effect.gen(function* () {
 		yield* cacheService.set(CACHE_KEYS.MODELS, allModels, CACHE_TTL.MODELS)
 		console.log("💾 [ModelService] Cached models for future requests")
+	})
+}
 
-		// Optionally store in database for analytics/caching (if service available)
+/**
+ * Store models in database in the background
+ */
+function storeInDatabase(
+	allModels: Model[],
+	modelsDevModels: Model[],
+	openRouterModels: Model[],
+	huggingFaceModels: Model[],
+	artificialAnalysisModels: Model[],
+) {
+	return Effect.gen(function* () {
 		const modelDataServiceOption = yield* Effect.serviceOption(ModelDataService)
 		if (modelDataServiceOption._tag === "Some" && allModels.length > 0) {
 			const modelDataService = modelDataServiceOption.value
@@ -417,6 +472,45 @@ export const ModelServiceLive = Layer.succeed(ModelService, {
 				),
 			)
 		}
+	})
+}
+
+export const ModelServiceLive = Layer.succeed(ModelService, {
+	fetchModels: Effect.gen(function* () {
+		// 1. Check cache first
+		const cacheService = yield* CacheService
+		const cachedModels = yield* cacheService.get<Model[] | null>(CACHE_KEYS.MODELS)
+		if (cachedModels !== null) {
+			console.log(
+				`🎯 [ModelService] Using cached models (${cachedModels.length} models)`,
+			)
+			return cachedModels
+		}
+
+		// 2. Fetch from all sources in parallel
+		console.log("🌐 [ModelService] Fetching fresh models from external APIs")
+		const fetchResults = yield* fetchFromAllSources()
+
+		// 3. Process results and extract models by source
+		const {
+			allModels,
+			modelsDevModels,
+			openRouterModels,
+			huggingFaceModels,
+			artificialAnalysisModels,
+		} = processResults(fetchResults)
+
+		// 4. Cache the combined results
+		yield* cacheResults(cacheService, allModels)
+
+		// 5. Store in database in background
+		yield* storeInDatabase(
+			allModels,
+			modelsDevModels,
+			openRouterModels,
+			huggingFaceModels,
+			artificialAnalysisModels,
+		)
 
 		return allModels
 	}),
