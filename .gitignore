@@ -31,3 +31,11 @@ yarn-error.log*
 # turbo
 .turbo
 .vercel
+
+# Build outputs (compiled JavaScript)
+**/*.js
+**/*.js.map
+**/*.d.ts
+!*.config.js
+!vitest.config.js
+!packages/website/next.config.js
