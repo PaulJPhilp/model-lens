@@ -1,6 +1,6 @@
 import { Ratelimit } from "@upstash/ratelimit"
 import { Redis } from "@upstash/redis"
-import { Context, Effect, Layer } from "effect"
+import { Effect } from "effect"
 
 export interface RateLimitResult {
 	success: boolean
@@ -9,18 +9,22 @@ export interface RateLimitResult {
 	reset: Date
 }
 
-export interface RateLimitServiceType {
-	readonly checkRateLimit: (
-		identifier: string,
-		limit: number,
-		window: number,
-	) => Effect.Effect<RateLimitResult, never>
-}
-
-export class RateLimitService extends Context.Tag("RateLimitService")<
-	RateLimitService,
-	RateLimitServiceType
->() {}
+/**
+ * Service for rate limiting API requests
+ */
+export class RateLimitService extends Effect.Service<RateLimitService>()(
+	"RateLimitService",
+	{
+		methods: {
+			/** Check rate limit for a given identifier */
+			checkRateLimit: (
+				identifier: string,
+				limit: number,
+				window: number,
+			) => Effect.Effect<RateLimitResult, never>,
+		},
+	},
+) {}
 
 // Create Redis instance (will use environment variables)
 const redis = new Redis({

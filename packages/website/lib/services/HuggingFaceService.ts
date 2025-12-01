@@ -1,4 +1,4 @@
-import { Context, Effect, Schedule } from "effect"
+import { Effect, Schedule } from "effect"
 import type { Model } from "../types"
 
 // HuggingFace API types
@@ -22,15 +22,18 @@ interface HuggingFaceModel {
 
 type HuggingFaceResponse = HuggingFaceModel[]
 
-export interface HuggingFaceServiceType {
-	/** Fetch models from HuggingFace API */
-	fetchModels: Effect.Effect<Model[], Error, never>
-}
-
-export class HuggingFaceService extends Context.Tag("HuggingFaceService")<
-	HuggingFaceService,
-	HuggingFaceServiceType
->() {}
+/**
+ * Service for fetching models from HuggingFace API
+ */
+export class HuggingFaceService extends Effect.Service<HuggingFaceService>()(
+	"HuggingFaceService",
+	{
+		methods: {
+			/** Fetch models from HuggingFace API */
+			fetchModels: Effect.Effect<Model[], Error, never>,
+		},
+	},
+) {}
 
 /**
  * Transform HuggingFace model to our internal Model format

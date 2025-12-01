@@ -1,4 +1,4 @@
-import { Context, Effect, Schedule } from "effect"
+import { Effect, Schedule } from "effect"
 import type { Model } from "../types"
 
 // ArtificialAnalysis API types
@@ -9,14 +9,18 @@ interface ArtificialAnalysisModel {
 	isLabClaimedValue: boolean
 }
 
-export interface ArtificialAnalysisServiceType {
-	/** Fetch models from ArtificialAnalysis API */
-	fetchModels: Effect.Effect<Model[], Error, never>
-}
-
-export class ArtificialAnalysisService extends Context.Tag(
+/**
+ * Service for fetching models from ArtificialAnalysis API
+ */
+export class ArtificialAnalysisService extends Effect.Service<ArtificialAnalysisService>()(
 	"ArtificialAnalysisService",
-)<ArtificialAnalysisService, ArtificialAnalysisServiceType>() {}
+	{
+		methods: {
+			/** Fetch models from ArtificialAnalysis API */
+			fetchModels: Effect.Effect<Model[], Error, never>,
+		},
+	},
+) {}
 
 /**
  * Transform ArtificialAnalysis model to our internal Model format

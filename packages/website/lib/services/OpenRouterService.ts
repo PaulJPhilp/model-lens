@@ -1,4 +1,4 @@
-import { Context, Effect, Schedule } from "effect"
+import { Effect, Schedule } from "effect"
 import type { Model } from "../types"
 
 // OpenRouter API types
@@ -34,15 +34,18 @@ interface OpenRouterResponse {
 	data: OpenRouterModel[]
 }
 
-export interface OpenRouterServiceType {
-	/** Fetch all models from OpenRouter API */
-	fetchModels: Effect.Effect<Model[], Error, never>
-}
-
-export class OpenRouterService extends Context.Tag("OpenRouterService")<
-	OpenRouterService,
-	OpenRouterServiceType
->() {}
+/**
+ * Service for fetching models from OpenRouter API
+ */
+export class OpenRouterService extends Effect.Service<OpenRouterService>()(
+	"OpenRouterService",
+	{
+		methods: {
+			/** Fetch all models from OpenRouter API */
+			fetchModels: Effect.Effect<Model[], Error, never>,
+		},
+	},
+) {}
 
 /**
  * Transform OpenRouter model to our internal Model format

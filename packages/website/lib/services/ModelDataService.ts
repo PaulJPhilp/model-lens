@@ -1,6 +1,6 @@
 import "server-only"
 import { desc, eq, sql } from "drizzle-orm"
-import { Context, Effect, Schedule } from "effect"
+import { Effect, Schedule } from "effect"
 import { db } from "../../src/db"
 import {
 	type ModelDataStats,
@@ -11,51 +11,56 @@ import {
 } from "../../src/db/schema.models"
 import type { Model } from "../types"
 
-export interface ModelDataServiceType {
-	/** Store a batch of models from a sync operation */
-	storeModelBatch: (
-		models: Model[],
-		syncId: string,
-		source?: string,
-	) => Effect.Effect<void, Error, never>
+/**
+ * Service for managing model data persistence and synchronization
+ *
+ * Handles storing model snapshots, tracking sync operations, and retrieving model data
+ */
+export class ModelDataService extends Effect.Service<ModelDataService>()(
+	"ModelDataService",
+	{
+		methods: {
+			/** Store a batch of models from a sync operation */
+			storeModelBatch: (
+				models: Model[],
+				syncId: string,
+				source?: string,
+			) => Effect.Effect<void, Error, never>,
 
-	/** Start a new sync operation */
-	startSync: () => Effect.Effect<ModelSyncRow, Error, never>
+			/** Start a new sync operation */
+			startSync: () => Effect.Effect<ModelSyncRow, Error, never>,
 
-	/** Complete a sync operation */
-	completeSync: (
-		syncId: string,
-		totalFetched: number,
-		totalStored: number,
-	) => Effect.Effect<void, Error, never>
+			/** Complete a sync operation */
+			completeSync: (
+				syncId: string,
+				totalFetched: number,
+				totalStored: number,
+			) => Effect.Effect<void, Error, never>,
 
-	/** Mark a sync operation as failed */
-	failSync: (
-		syncId: string,
-		errorMessage: string,
-	) => Effect.Effect<void, Error, never>
+			/** Mark a sync operation as failed */
+			failSync: (
+				syncId: string,
+				errorMessage: string,
+			) => Effect.Effect<void, Error, never>,
 
-	/** Get the latest models from the database */
-	getLatestModels: () => Effect.Effect<Model[], Error, never>
+			/** Get the latest models from the database */
+			getLatestModels: () => Effect.Effect<Model[], Error, never>,
 
-	/** Get the latest models from a specific source */
-	getLatestModelsBySource: (
-		source: string,
-	) => Effect.Effect<Model[], Error, never>
+			/** Get the latest models from a specific source */
+			getLatestModelsBySource: (
+				source: string,
+			) => Effect.Effect<Model[], Error, never>,
 
-	/** Get model data statistics */
-	getModelDataStats: () => Effect.Effect<ModelDataStats, Error, never>
+			/** Get model data statistics */
+			getModelDataStats: () => Effect.Effect<ModelDataStats, Error, never>,
 
-	/** Get sync history */
-	getSyncHistory: (
-		limit?: number,
-	) => Effect.Effect<ModelSyncRow[], Error, never>
-}
-
-export class ModelDataService extends Context.Tag("ModelDataService")<
-	ModelDataService,
-	ModelDataServiceType
->() {}
+			/** Get sync history */
+			getSyncHistory: (
+				limit?: number,
+			) => Effect.Effect<ModelSyncRow[], Error, never>,
+		},
+	},
+) {}
 
 /**
  * Live implementation of ModelDataService
