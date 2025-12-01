@@ -1,11 +1,11 @@
 /* @vitest-environment node */
 import { Effect, Layer } from "effect"
-import { describe, expect, it, beforeEach, vi } from "vitest"
-import { ModelService } from "./ModelService"
-import { ModelServiceLive } from "./ModelServiceLive"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+import type { Model } from "../types"
 import { CacheService } from "./CacheService"
 import { ModelDataService } from "./ModelDataService"
-import type { Model } from "../types"
+import { ModelService } from "./ModelService"
+import { ModelServiceLive } from "./ModelServiceLive"
 
 // Minimal stub implementations for dependencies
 const CacheServiceStub = Layer.succeed(CacheService, {
@@ -50,14 +50,20 @@ describe("ModelService", () => {
 			"should fetch models from real external APIs",
 			{ timeout: 30000 },
 			async () => {
-				const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
+				const layer = Layer.merge(
+					ModelServiceLive,
+					CacheServiceStub,
+					ModelDataServiceStub,
+				)
 				const program = Effect.gen(function* () {
 					const service = yield* ModelService
 					const models = yield* service.fetchModels
 					return models
 				})
 
-				const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+				const result = await Effect.runPromise(
+					program.pipe(Effect.provide(layer)),
+				)
 				expect(Array.isArray(result)).toBe(true)
 				expect(result.length).toBeGreaterThan(0)
 			},
@@ -67,14 +73,20 @@ describe("ModelService", () => {
 			"should fetch models from all 4 sources (models.dev, OpenRouter, HuggingFace, ArtificialAnalysis)",
 			{ timeout: 45000 },
 			async () => {
-				const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
+				const layer = Layer.merge(
+					ModelServiceLive,
+					CacheServiceStub,
+					ModelDataServiceStub,
+				)
 				const program = Effect.gen(function* () {
 					const service = yield* ModelService
 					const models = yield* service.fetchModels
 					return models
 				})
 
-				const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+				const result = await Effect.runPromise(
+					program.pipe(Effect.provide(layer)),
+				)
 
 				// Verify we have models from multiple sources
 				const providers = new Set(result.map((m) => m.provider))
@@ -82,150 +94,220 @@ describe("ModelService", () => {
 			},
 		)
 
-		it("should return Model objects with required properties", { timeout: 30000 }, async () => {
-			const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
-			const program = Effect.gen(function* () {
-				const service = yield* ModelService
-				const models = yield* service.fetchModels
-				return models
-			})
+		it(
+			"should return Model objects with required properties",
+			{ timeout: 30000 },
+			async () => {
+				const layer = Layer.merge(
+					ModelServiceLive,
+					CacheServiceStub,
+					ModelDataServiceStub,
+				)
+				const program = Effect.gen(function* () {
+					const service = yield* ModelService
+					const models = yield* service.fetchModels
+					return models
+				})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+				const result = await Effect.runPromise(
+					program.pipe(Effect.provide(layer)),
+				)
 
-			// Verify first model has required properties
-			if (result.length > 0) {
-				const firstModel = result[0]
-				expect(firstModel).toHaveProperty("id")
-				expect(firstModel).toHaveProperty("name")
-				expect(firstModel).toHaveProperty("provider")
-				expect(firstModel).toHaveProperty("contextWindow")
-				expect(firstModel).toHaveProperty("maxOutputTokens")
-				expect(firstModel).toHaveProperty("inputCost")
-				expect(firstModel).toHaveProperty("outputCost")
-				expect(firstModel).toHaveProperty("modalities")
-				expect(firstModel).toHaveProperty("capabilities")
-			}
-		})
+				// Verify first model has required properties
+				if (result.length > 0) {
+					const firstModel = result[0]
+					expect(firstModel).toHaveProperty("id")
+					expect(firstModel).toHaveProperty("name")
+					expect(firstModel).toHaveProperty("provider")
+					expect(firstModel).toHaveProperty("contextWindow")
+					expect(firstModel).toHaveProperty("maxOutputTokens")
+					expect(firstModel).toHaveProperty("inputCost")
+					expect(firstModel).toHaveProperty("outputCost")
+					expect(firstModel).toHaveProperty("modalities")
+					expect(firstModel).toHaveProperty("capabilities")
+				}
+			},
+		)
 
-		it("should handle partial failures gracefully (continue if one API fails)", { timeout: 45000 }, async () => {
-			// This test verifies the system continues even if one API is unavailable
-			const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
-			const program = Effect.gen(function* () {
-				const service = yield* ModelService
-				const models = yield* service.fetchModels
-				return models
-			})
+		it(
+			"should handle partial failures gracefully (continue if one API fails)",
+			{ timeout: 45000 },
+			async () => {
+				// This test verifies the system continues even if one API is unavailable
+				const layer = Layer.merge(
+					ModelServiceLive,
+					CacheServiceStub,
+					ModelDataServiceStub,
+				)
+				const program = Effect.gen(function* () {
+					const service = yield* ModelService
+					const models = yield* service.fetchModels
+					return models
+				})
 
-			// Run multiple times to see if we get consistent partial results
-			const results = await Promise.all([
-				Effect.runPromise(program.pipe(Effect.provide(layer))),
-				Effect.runPromise(program.pipe(Effect.provide(layer))),
-			])
+				// Run multiple times to see if we get consistent partial results
+				const results = await Promise.all([
+					Effect.runPromise(program.pipe(Effect.provide(layer))),
+					Effect.runPromise(program.pipe(Effect.provide(layer))),
+				])
 
-			// Both should succeed even if one source fails
-			expect(results[0]).toBeDefined()
-			expect(results[1]).toBeDefined()
-			expect(Array.isArray(results[0])).toBe(true)
-			expect(Array.isArray(results[1])).toBe(true)
-		})
+				// Both should succeed even if one source fails
+				expect(results[0]).toBeDefined()
+				expect(results[1]).toBeDefined()
+				expect(Array.isArray(results[0])).toBe(true)
+				expect(Array.isArray(results[1])).toBe(true)
+			},
+		)
 
-		it("should deduplicate models from multiple sources", { timeout: 30000 }, async () => {
-			const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
-			const program = Effect.gen(function* () {
-				const service = yield* ModelService
-				const models = yield* service.fetchModels
-				return models
-			})
+		it(
+			"should deduplicate models from multiple sources",
+			{ timeout: 30000 },
+			async () => {
+				const layer = Layer.merge(
+					ModelServiceLive,
+					CacheServiceStub,
+					ModelDataServiceStub,
+				)
+				const program = Effect.gen(function* () {
+					const service = yield* ModelService
+					const models = yield* service.fetchModels
+					return models
+				})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+				const result = await Effect.runPromise(
+					program.pipe(Effect.provide(layer)),
+				)
 
-			// Check for duplicates by ID
-			const ids = result.map((m) => m.id)
-			const uniqueIds = new Set(ids)
-			// Different sources have overlapping models, so allow up to 35% duplication
-			const duplicationRate = (ids.length - uniqueIds.size) / ids.length
-			expect(duplicationRate).toBeLessThan(0.35) // Allow up to 35% duplication from multiple sources
-		})
+				// Check for duplicates by ID
+				const ids = result.map((m) => m.id)
+				const uniqueIds = new Set(ids)
+				// Different sources have overlapping models, so allow up to 35% duplication
+				const duplicationRate = (ids.length - uniqueIds.size) / ids.length
+				expect(duplicationRate).toBeLessThan(0.35) // Allow up to 35% duplication from multiple sources
+			},
+		)
 
-		it("should include models with various capabilities", { timeout: 30000 }, async () => {
-			const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
-			const program = Effect.gen(function* () {
-				const service = yield* ModelService
-				const models = yield* service.fetchModels
-				return models
-			})
+		it(
+			"should include models with various capabilities",
+			{ timeout: 30000 },
+			async () => {
+				const layer = Layer.merge(
+					ModelServiceLive,
+					CacheServiceStub,
+					ModelDataServiceStub,
+				)
+				const program = Effect.gen(function* () {
+					const service = yield* ModelService
+					const models = yield* service.fetchModels
+					return models
+				})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+				const result = await Effect.runPromise(
+					program.pipe(Effect.provide(layer)),
+				)
 
-			// Verify we have diverse capabilities
-			const allCapabilities = new Set<string>()
-			result.forEach((m) => {
-				m.capabilities.forEach((c) => allCapabilities.add(c))
-			})
-			expect(allCapabilities.size).toBeGreaterThan(0)
-		})
+				// Verify we have diverse capabilities
+				const allCapabilities = new Set<string>()
+				result.forEach((m) => {
+					m.capabilities.forEach((c) => allCapabilities.add(c))
+				})
+				expect(allCapabilities.size).toBeGreaterThan(0)
+			},
+		)
 
-		it("should include models with various modalities", { timeout: 30000 }, async () => {
-			const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
-			const program = Effect.gen(function* () {
-				const service = yield* ModelService
-				const models = yield* service.fetchModels
-				return models
-			})
+		it(
+			"should include models with various modalities",
+			{ timeout: 30000 },
+			async () => {
+				const layer = Layer.merge(
+					ModelServiceLive,
+					CacheServiceStub,
+					ModelDataServiceStub,
+				)
+				const program = Effect.gen(function* () {
+					const service = yield* ModelService
+					const models = yield* service.fetchModels
+					return models
+				})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+				const result = await Effect.runPromise(
+					program.pipe(Effect.provide(layer)),
+				)
 
-			// Verify we have diverse modalities
-			const allModalities = new Set<string>()
-			result.forEach((m) => {
-				m.modalities.forEach((mod) => allModalities.add(mod))
-			})
-			expect(allModalities.size).toBeGreaterThan(0)
-		})
+				// Verify we have diverse modalities
+				const allModalities = new Set<string>()
+				result.forEach((m) => {
+					m.modalities.forEach((mod) => allModalities.add(mod))
+				})
+				expect(allModalities.size).toBeGreaterThan(0)
+			},
+		)
 
-		it("should fetch pricing information correctly", { timeout: 30000 }, async () => {
-			const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
-			const program = Effect.gen(function* () {
-				const service = yield* ModelService
-				const models = yield* service.fetchModels
-				return models
-			})
+		it(
+			"should fetch pricing information correctly",
+			{ timeout: 30000 },
+			async () => {
+				const layer = Layer.merge(
+					ModelServiceLive,
+					CacheServiceStub,
+					ModelDataServiceStub,
+				)
+				const program = Effect.gen(function* () {
+					const service = yield* ModelService
+					const models = yield* service.fetchModels
+					return models
+				})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+				const result = await Effect.runPromise(
+					program.pipe(Effect.provide(layer)),
+				)
 
-			// Find models with pricing
-			const pricedModels = result.filter((m) => m.inputCost > 0 || m.outputCost > 0)
-			expect(pricedModels.length).toBeGreaterThan(0)
+				// Find models with pricing
+				const pricedModels = result.filter(
+					(m) => m.inputCost > 0 || m.outputCost > 0,
+				)
+				expect(pricedModels.length).toBeGreaterThan(0)
 
-			// Verify pricing is reasonable (not negative, not absurdly high)
-			pricedModels.forEach((m) => {
-				expect(m.inputCost).toBeGreaterThanOrEqual(0)
-				expect(m.outputCost).toBeGreaterThanOrEqual(0)
-				expect(m.inputCost).toBeLessThan(1000) // Sanity check
-				expect(m.outputCost).toBeLessThan(1000)
-			})
-		})
+				// Verify pricing is reasonable (not negative, not absurdly high)
+				pricedModels.forEach((m) => {
+					expect(m.inputCost).toBeGreaterThanOrEqual(0)
+					expect(m.outputCost).toBeGreaterThanOrEqual(0)
+					expect(m.inputCost).toBeLessThan(1000) // Sanity check
+					expect(m.outputCost).toBeLessThan(1000)
+				})
+			},
+		)
 
-		it("should include context window information", { timeout: 30000 }, async () => {
-			const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
-			const program = Effect.gen(function* () {
-				const service = yield* ModelService
-				const models = yield* service.fetchModels
-				return models
-			})
+		it(
+			"should include context window information",
+			{ timeout: 30000 },
+			async () => {
+				const layer = Layer.merge(
+					ModelServiceLive,
+					CacheServiceStub,
+					ModelDataServiceStub,
+				)
+				const program = Effect.gen(function* () {
+					const service = yield* ModelService
+					const models = yield* service.fetchModels
+					return models
+				})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+				const result = await Effect.runPromise(
+					program.pipe(Effect.provide(layer)),
+				)
 
-			// Find models with context windows
-			const modelsWithContext = result.filter((m) => m.contextWindow > 0)
-			expect(modelsWithContext.length).toBeGreaterThan(0)
+				// Find models with context windows
+				const modelsWithContext = result.filter((m) => m.contextWindow > 0)
+				expect(modelsWithContext.length).toBeGreaterThan(0)
 
-			// Verify context windows are reasonable (some models like Claude 3.5 have 200M tokens)
-			modelsWithContext.forEach((m) => {
-				expect(m.contextWindow).toBeGreaterThan(0)
-				expect(m.contextWindow).toBeLessThanOrEqual(1000000000) // Up to 1B tokens
-			})
-		})
+				// Verify context windows are reasonable (some models like Claude 3.5 have 200M tokens)
+				modelsWithContext.forEach((m) => {
+					expect(m.contextWindow).toBeGreaterThan(0)
+					expect(m.contextWindow).toBeLessThanOrEqual(1000000000) // Up to 1B tokens
+				})
+			},
+		)
 	})
 
 	describe("fetchModelsFromAPI()", () => {
@@ -233,39 +315,59 @@ describe("ModelService", () => {
 			"should fetch models directly from models.dev API",
 			{ timeout: 30000 },
 			async () => {
-				const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
+				const layer = Layer.merge(
+					ModelServiceLive,
+					CacheServiceStub,
+					ModelDataServiceStub,
+				)
 				const program = Effect.gen(function* () {
 					const service = yield* ModelService
 					const models = yield* service.fetchModelsFromAPI
 					return models
 				})
 
-				const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+				const result = await Effect.runPromise(
+					program.pipe(Effect.provide(layer)),
+				)
 				expect(Array.isArray(result)).toBe(true)
 				expect(result.length).toBeGreaterThan(0)
 			},
 		)
 
-		it("should only return models from models.dev source", { timeout: 30000 }, async () => {
-			const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
-			const program = Effect.gen(function* () {
-				const service = yield* ModelService
-				const models = yield* service.fetchModelsFromAPI
-				return models
-			})
+		it(
+			"should only return models from models.dev source",
+			{ timeout: 30000 },
+			async () => {
+				const layer = Layer.merge(
+					ModelServiceLive,
+					CacheServiceStub,
+					ModelDataServiceStub,
+				)
+				const program = Effect.gen(function* () {
+					const service = yield* ModelService
+					const models = yield* service.fetchModelsFromAPI
+					return models
+				})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+				const result = await Effect.runPromise(
+					program.pipe(Effect.provide(layer)),
+				)
 
-			// All models should come from models.dev structure
-			result.forEach((m) => {
-				expect(m).toHaveProperty("id")
-				expect(m).toHaveProperty("name")
-				expect(m).toHaveProperty("provider")
-			})
-		})
+				// All models should come from models.dev structure
+				result.forEach((m) => {
+					expect(m).toHaveProperty("id")
+					expect(m).toHaveProperty("name")
+					expect(m).toHaveProperty("provider")
+				})
+			},
+		)
 
 		it("should retry on network failure", { timeout: 45000 }, async () => {
-			const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
+			const layer = Layer.merge(
+				ModelServiceLive,
+				CacheServiceStub,
+				ModelDataServiceStub,
+			)
 
 			// Make multiple calls to verify retry behavior
 			const program = Effect.gen(function* () {
@@ -274,21 +376,29 @@ describe("ModelService", () => {
 				return models
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(layer)),
+			)
 			expect(Array.isArray(result)).toBe(true)
 		})
 	})
 
 	describe("getModelStats()", () => {
 		it("should return model statistics", async () => {
-			const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
+			const layer = Layer.merge(
+				ModelServiceLive,
+				CacheServiceStub,
+				ModelDataServiceStub,
+			)
 			const program = Effect.gen(function* () {
 				const service = yield* ModelService
 				const stats = yield* service.getModelStats
 				return stats
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(layer)),
+			)
 
 			expect(result).toHaveProperty("totalModels")
 			expect(result).toHaveProperty("providers")
@@ -297,14 +407,20 @@ describe("ModelService", () => {
 		})
 
 		it("should return valid statistics structure", async () => {
-			const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
+			const layer = Layer.merge(
+				ModelServiceLive,
+				CacheServiceStub,
+				ModelDataServiceStub,
+			)
 			const program = Effect.gen(function* () {
 				const service = yield* ModelService
 				const stats = yield* service.getModelStats
 				return stats
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(layer)),
+			)
 
 			expect(typeof result.totalModels).toBe("number")
 			expect(Array.isArray(result.providers)).toBe(true)
@@ -318,7 +434,11 @@ describe("ModelService", () => {
 			"should handle concurrent fetchModels calls",
 			{ timeout: 45000 },
 			async () => {
-				const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
+				const layer = Layer.merge(
+					ModelServiceLive,
+					CacheServiceStub,
+					ModelDataServiceStub,
+				)
 				const program = Effect.gen(function* () {
 					const service = yield* ModelService
 
@@ -331,7 +451,9 @@ describe("ModelService", () => {
 					return results
 				})
 
-				const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+				const result = await Effect.runPromise(
+					program.pipe(Effect.provide(layer)),
+				)
 
 				// All three calls should succeed
 				expect(result.length).toBe(3)
@@ -348,14 +470,20 @@ describe("ModelService", () => {
 			"should ensure all models have valid IDs",
 			{ timeout: 30000 },
 			async () => {
-				const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
+				const layer = Layer.merge(
+					ModelServiceLive,
+					CacheServiceStub,
+					ModelDataServiceStub,
+				)
 				const program = Effect.gen(function* () {
 					const service = yield* ModelService
 					const models = yield* service.fetchModels
 					return models
 				})
 
-				const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+				const result = await Effect.runPromise(
+					program.pipe(Effect.provide(layer)),
+				)
 
 				result.forEach((m) => {
 					expect(m.id).toBeTruthy()
@@ -369,14 +497,20 @@ describe("ModelService", () => {
 			"should ensure all models have valid names",
 			{ timeout: 30000 },
 			async () => {
-				const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
+				const layer = Layer.merge(
+					ModelServiceLive,
+					CacheServiceStub,
+					ModelDataServiceStub,
+				)
 				const program = Effect.gen(function* () {
 					const service = yield* ModelService
 					const models = yield* service.fetchModels
 					return models
 				})
 
-				const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+				const result = await Effect.runPromise(
+					program.pipe(Effect.provide(layer)),
+				)
 
 				result.forEach((m) => {
 					expect(m.name).toBeTruthy()
@@ -390,14 +524,20 @@ describe("ModelService", () => {
 			"should ensure all models have provider information",
 			{ timeout: 30000 },
 			async () => {
-				const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
+				const layer = Layer.merge(
+					ModelServiceLive,
+					CacheServiceStub,
+					ModelDataServiceStub,
+				)
 				const program = Effect.gen(function* () {
 					const service = yield* ModelService
 					const models = yield* service.fetchModels
 					return models
 				})
 
-				const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+				const result = await Effect.runPromise(
+					program.pipe(Effect.provide(layer)),
+				)
 
 				result.forEach((m) => {
 					expect(m.provider).toBeTruthy()
@@ -410,14 +550,20 @@ describe("ModelService", () => {
 			"should have valid arrays for modalities and capabilities",
 			{ timeout: 30000 },
 			async () => {
-				const layer = Layer.merge(ModelServiceLive, CacheServiceStub, ModelDataServiceStub)
+				const layer = Layer.merge(
+					ModelServiceLive,
+					CacheServiceStub,
+					ModelDataServiceStub,
+				)
 				const program = Effect.gen(function* () {
 					const service = yield* ModelService
 					const models = yield* service.fetchModels
 					return models
 				})
 
-				const result = await Effect.runPromise(program.pipe(Effect.provide(layer)))
+				const result = await Effect.runPromise(
+					program.pipe(Effect.provide(layer)),
+				)
 
 				result.forEach((m) => {
 					expect(Array.isArray(m.modalities)).toBe(true)

@@ -1,7 +1,7 @@
 /* @vitest-environment node */
-import { describe, expect, it, beforeEach, vi } from "vitest"
-import { ErrorAggregator } from "./ErrorAggregator"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { ServiceError } from "./ErrorAggregator"
+import { ErrorAggregator } from "./ErrorAggregator"
 
 describe("ErrorAggregator", () => {
 	let aggregator: ErrorAggregator
@@ -28,7 +28,9 @@ describe("ErrorAggregator", () => {
 			const errors = aggregator.getErrors()
 			const error = errors[0]
 
-			expect(error.timestamp.getTime()).toBeGreaterThanOrEqual(beforeTime.getTime())
+			expect(error.timestamp.getTime()).toBeGreaterThanOrEqual(
+				beforeTime.getTime(),
+			)
 			expect(error.timestamp.getTime()).toBeLessThanOrEqual(afterTime.getTime())
 		})
 
@@ -127,7 +129,11 @@ describe("ErrorAggregator", () => {
 			const initialLength = errors.length
 
 			// Try to mutate the returned array
-			;(errors as any).push({ service: "Fake", error: "Fake", timestamp: new Date() })
+			;(errors as any).push({
+				service: "Fake",
+				error: "Fake",
+				timestamp: new Date(),
+			})
 
 			// Internal errors should not be affected
 			const errors2 = aggregator.getErrors()

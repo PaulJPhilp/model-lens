@@ -1,9 +1,10 @@
 /* @vitest-environment node */
-import { describe, expect, it, beforeEach, afterEach } from "vitest"
-import { Effect, Layer } from "effect"
-import type { Model } from "../../lib/types"
+
+import { Effect, type Layer } from "effect"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { ModelDataService } from "../../lib/services/ModelDataService"
 import { ModelDataServiceLive } from "../../lib/services/ModelDataServiceLive"
+import type { Model } from "../../lib/types"
 
 /**
  * Integration Tests - Data Sync Workflow
@@ -58,7 +59,7 @@ describe("Data Sync Integration", () => {
 
 			try {
 				const syncId = await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
+					program.pipe(Effect.provide(createTestLayer())),
 				)
 				expect(syncId).toBeTruthy()
 			} catch (error) {
@@ -92,9 +93,7 @@ describe("Data Sync Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
-				)
+				await Effect.runPromise(program.pipe(Effect.provide(createTestLayer())))
 			} catch (error) {
 				// Skip if database unavailable
 				expect(error).toBeDefined()
@@ -126,9 +125,7 @@ describe("Data Sync Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
-				)
+				await Effect.runPromise(program.pipe(Effect.provide(createTestLayer())))
 			} catch (error) {
 				// Skip if database unavailable
 				expect(error).toBeDefined()
@@ -165,9 +162,7 @@ describe("Data Sync Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
-				)
+				await Effect.runPromise(program.pipe(Effect.provide(createTestLayer())))
 			} catch (error) {
 				// Skip if database unavailable
 				expect(error).toBeDefined()
@@ -183,9 +178,7 @@ describe("Data Sync Integration", () => {
 				createMockModel("claude-3", "anthropic"),
 				createMockModel("claude-2", "anthropic"),
 			]
-			const googleModels = [
-				createMockModel("gemini-pro", "google"),
-			]
+			const googleModels = [createMockModel("gemini-pro", "google")]
 
 			const program = Effect.gen(function* () {
 				const service = yield* ModelDataService
@@ -208,7 +201,8 @@ describe("Data Sync Integration", () => {
 
 				// Verify source-specific retrieval works
 				const openaiStored = yield* service.getLatestModelsBySource("openai")
-				const anthropicStored = yield* service.getLatestModelsBySource("anthropic")
+				const anthropicStored =
+					yield* service.getLatestModelsBySource("anthropic")
 				const googleStored = yield* service.getLatestModelsBySource("google")
 
 				expect(openaiStored.some((m) => m.id === "gpt-4")).toBe(true)
@@ -219,9 +213,7 @@ describe("Data Sync Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
-				)
+				await Effect.runPromise(program.pipe(Effect.provide(createTestLayer())))
 			} catch (error) {
 				// Skip if database unavailable
 				expect(error).toBeDefined()
@@ -247,7 +239,8 @@ describe("Data Sync Integration", () => {
 				yield* service.storeModelBatch([originalModel], syncId, "testprovider")
 
 				// Retrieve and verify
-				const storedModels = yield* service.getLatestModelsBySource("testprovider")
+				const storedModels =
+					yield* service.getLatestModelsBySource("testprovider")
 				const retrieved = storedModels.find((m) => m.id === "test-model-123")
 
 				expect(retrieved).toBeDefined()
@@ -264,9 +257,7 @@ describe("Data Sync Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
-				)
+				await Effect.runPromise(program.pipe(Effect.provide(createTestLayer())))
 			} catch (error) {
 				// Skip if database unavailable
 				expect(error).toBeDefined()
@@ -309,7 +300,7 @@ describe("Data Sync Integration", () => {
 
 			try {
 				const count = await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
+					program.pipe(Effect.provide(createTestLayer())),
 				)
 				expect(count).toBeGreaterThanOrEqual(0)
 			} catch (error) {
@@ -330,9 +321,7 @@ describe("Data Sync Integration", () => {
 					createMockModel("gpt-4", "openai"),
 					createMockModel("gpt-3.5", "openai"),
 				]
-				const anthropicModels = [
-					createMockModel("claude-3", "anthropic"),
-				]
+				const anthropicModels = [createMockModel("claude-3", "anthropic")]
 
 				yield* service.storeModelBatch(openaiModels, syncId, "openai")
 				yield* service.storeModelBatch(anthropicModels, syncId, "anthropic")
@@ -345,16 +334,16 @@ describe("Data Sync Integration", () => {
 				expect(stats.providers).toContain("openai")
 				expect(stats.providers).toContain("anthropic")
 				expect(stats.modelCountByProvider["openai"]).toBeGreaterThanOrEqual(2)
-				expect(stats.modelCountByProvider["anthropic"]).toBeGreaterThanOrEqual(1)
+				expect(stats.modelCountByProvider["anthropic"]).toBeGreaterThanOrEqual(
+					1,
+				)
 				expect(stats.lastSyncAt).toBeDefined()
 
 				return stats
 			})
 
 			try {
-				await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
-				)
+				await Effect.runPromise(program.pipe(Effect.provide(createTestLayer())))
 			} catch (error) {
 				// Skip if database unavailable
 				expect(error).toBeDefined()
@@ -370,7 +359,7 @@ describe("Data Sync Integration", () => {
 				// Try to complete non-existent sync
 				const result = yield* Effect.catchAll(
 					service.completeSync("invalid-sync-id", 10, 10),
-					(error) => Effect.succeed(String(error))
+					(error) => Effect.succeed(String(error)),
 				)
 
 				expect(result).toContain("not found")
@@ -379,7 +368,7 @@ describe("Data Sync Integration", () => {
 
 			try {
 				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
+					program.pipe(Effect.provide(createTestLayer())),
 				)
 				expect(result).toBeTruthy()
 			} catch (error) {
@@ -410,9 +399,7 @@ describe("Data Sync Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
-				)
+				await Effect.runPromise(program.pipe(Effect.provide(createTestLayer())))
 			} catch (error) {
 				// Skip if database unavailable
 				expect(error).toBeDefined()
@@ -435,7 +422,10 @@ describe("Data Sync Integration", () => {
 				yield* service.storeModelBatch(models, syncId, "provider1")
 
 				// Simulate partial failure by marking as failed
-				yield* service.failSync(syncId, "Partial failure during sync: provider2 unavailable")
+				yield* service.failSync(
+					syncId,
+					"Partial failure during sync: provider2 unavailable",
+				)
 
 				// Verify failed state but data is preserved
 				const history = yield* service.getSyncHistory(1)
@@ -449,9 +439,7 @@ describe("Data Sync Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
-				)
+				await Effect.runPromise(program.pipe(Effect.provide(createTestLayer())))
 			} catch (error) {
 				// Skip if database unavailable
 				expect(error).toBeDefined()
@@ -474,7 +462,11 @@ describe("Data Sync Integration", () => {
 
 				// Store from both sources
 				yield* service.storeModelBatch([model1], syncId, "models.dev")
-				yield* service.storeModelBatch([model1_openrouter], syncId, "openrouter")
+				yield* service.storeModelBatch(
+					[model1_openrouter],
+					syncId,
+					"openrouter",
+				)
 
 				// Complete sync
 				yield* service.completeSync(syncId, 2, 2)
@@ -492,7 +484,7 @@ describe("Data Sync Integration", () => {
 
 			try {
 				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
+					program.pipe(Effect.provide(createTestLayer())),
 				)
 				expect(result.modelCount).toBeGreaterThanOrEqual(2)
 			} catch (error) {
@@ -534,9 +526,7 @@ describe("Data Sync Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
-				)
+				await Effect.runPromise(program.pipe(Effect.provide(createTestLayer())))
 			} catch (error) {
 				// Skip if database unavailable
 				expect(error).toBeDefined()
@@ -577,7 +567,7 @@ describe("Data Sync Integration", () => {
 
 			try {
 				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
+					program.pipe(Effect.provide(createTestLayer())),
 				)
 				expect(result.sync1Id).not.toBe(result.sync2Id)
 			} catch (error) {
@@ -604,7 +594,11 @@ describe("Data Sync Integration", () => {
 				// Store as would be done after real API call
 				yield* service.storeModelBatch(realWorldModels, sync.id, "models.dev")
 
-				yield* service.completeSync(sync.id, realWorldModels.length, realWorldModels.length)
+				yield* service.completeSync(
+					sync.id,
+					realWorldModels.length,
+					realWorldModels.length,
+				)
 
 				// Verify
 				const stored = yield* service.getLatestModels()
@@ -615,7 +609,7 @@ describe("Data Sync Integration", () => {
 
 			try {
 				const count = await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
+					program.pipe(Effect.provide(createTestLayer())),
 				)
 				expect(count).toBeGreaterThanOrEqual(3)
 			} catch (error) {
@@ -658,9 +652,7 @@ describe("Data Sync Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
-				)
+				await Effect.runPromise(program.pipe(Effect.provide(createTestLayer())))
 			} catch (error) {
 				// Skip if database unavailable
 				expect(error).toBeDefined()
@@ -689,7 +681,7 @@ describe("Data Sync Integration", () => {
 				yield* service.storeModelBatch(
 					[smallContext, mediumContext, largeContext, veryLargeContext],
 					sync.id,
-					"all-providers"
+					"all-providers",
 				)
 
 				yield* service.completeSync(sync.id, 4, 4)
@@ -707,9 +699,7 @@ describe("Data Sync Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
-				)
+				await Effect.runPromise(program.pipe(Effect.provide(createTestLayer())))
 			} catch (error) {
 				// Skip if database unavailable
 				expect(error).toBeDefined()
@@ -718,44 +708,55 @@ describe("Data Sync Integration", () => {
 	})
 
 	describe("performance and scale", () => {
-		it("should handle large batch storage efficiently", async () => {
-			const program = Effect.gen(function* () {
-				const service = yield* ModelDataService
+		it(
+			"should handle large batch storage efficiently",
+			async () => {
+				const program = Effect.gen(function* () {
+					const service = yield* ModelDataService
 
-				// Create large batch of models
-				const largeModels: Model[] = []
-				for (let i = 0; i < 100; i++) {
-					largeModels.push(createMockModel(`model-${i}`, "test-provider"))
+					// Create large batch of models
+					const largeModels: Model[] = []
+					for (let i = 0; i < 100; i++) {
+						largeModels.push(createMockModel(`model-${i}`, "test-provider"))
+					}
+
+					const startTime = Date.now()
+
+					const sync = yield* service.startSync()
+					yield* service.storeModelBatch(largeModels, sync.id, "test-provider")
+					yield* service.completeSync(
+						sync.id,
+						largeModels.length,
+						largeModels.length,
+					)
+
+					const duration = Date.now() - startTime
+
+					// Verify storage
+					const stored = yield* service.getLatestModels()
+					expect(stored.length).toBeGreaterThanOrEqual(100)
+
+					// Should complete in reasonable time (< 10 seconds)
+					expect(duration).toBeLessThan(10000)
+
+					return { duration, count: stored.length }
+				})
+
+				try {
+					const result = await Effect.runPromise(
+						program.pipe(
+							Effect.provide(createTestLayer()),
+							Effect.timeout(15000),
+						),
+					)
+					expect(result.count).toBeGreaterThanOrEqual(100)
+				} catch (error) {
+					// Skip if database unavailable
+					expect(error).toBeDefined()
 				}
-
-				const startTime = Date.now()
-
-				const sync = yield* service.startSync()
-				yield* service.storeModelBatch(largeModels, sync.id, "test-provider")
-				yield* service.completeSync(sync.id, largeModels.length, largeModels.length)
-
-				const duration = Date.now() - startTime
-
-				// Verify storage
-				const stored = yield* service.getLatestModels()
-				expect(stored.length).toBeGreaterThanOrEqual(100)
-
-				// Should complete in reasonable time (< 10 seconds)
-				expect(duration).toBeLessThan(10000)
-
-				return { duration, count: stored.length }
-			})
-
-			try {
-				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()), Effect.timeout(15000))
-				)
-				expect(result.count).toBeGreaterThanOrEqual(100)
-			} catch (error) {
-				// Skip if database unavailable
-				expect(error).toBeDefined()
-			}
-		}, { timeout: 20000 })
+			},
+			{ timeout: 20000 },
+		)
 
 		it("should retrieve large result sets efficiently", async () => {
 			const program = Effect.gen(function* () {
@@ -781,7 +782,7 @@ describe("Data Sync Integration", () => {
 
 			try {
 				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(createTestLayer()))
+					program.pipe(Effect.provide(createTestLayer())),
 				)
 				expect(result.modelCount).toBeGreaterThanOrEqual(0)
 			} catch (error) {

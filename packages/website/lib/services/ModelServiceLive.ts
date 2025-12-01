@@ -130,9 +130,7 @@ function fetchFromModelsdev() {
 						Effect.fail(
 							new Error(
 								`Failed to transform models.dev data: ${
-									error instanceof Error
-										? error.message
-										: "Transform error"
+									error instanceof Error ? error.message : "Transform error"
 								}`,
 							),
 						),
@@ -181,9 +179,7 @@ function fetchFromOpenRouter() {
 						Effect.fail(
 							new Error(
 								`Failed to transform OpenRouter data: ${
-									error instanceof Error
-										? error.message
-										: "Transform error"
+									error instanceof Error ? error.message : "Transform error"
 								}`,
 							),
 						),
@@ -224,9 +220,7 @@ function fetchFromHuggingFace() {
 						Effect.fail(
 							new Error(
 								`Failed to transform HuggingFace data: ${
-									error instanceof Error
-										? error.message
-										: "Transform error"
+									error instanceof Error ? error.message : "Transform error"
 								}`,
 							),
 						),
@@ -248,9 +242,7 @@ function fetchFromArtificialAnalysis() {
 				fetch("https://artificialanalysis.ai/api/datasets/96.csv").then(
 					async (res) => {
 						if (!res.ok) {
-							throw new Error(
-								`ArtificialAnalysis returned ${res.status}`,
-							)
+							throw new Error(`ArtificialAnalysis returned ${res.status}`)
 						}
 						return res.text()
 					},
@@ -277,8 +269,7 @@ function fetchFromArtificialAnalysis() {
 									if (header === "intelligenceIndex") {
 										model[header] = parseFloat(values[index]) || 0
 									} else if (header === "isLabClaimedValue") {
-										model[header] =
-											values[index].toLowerCase() === "true"
+										model[header] = values[index].toLowerCase() === "true"
 									} else {
 										model[header] = values[index]
 									}
@@ -292,9 +283,7 @@ function fetchFromArtificialAnalysis() {
 						Effect.fail(
 							new Error(
 								`Failed to transform ArtificialAnalysis data: ${
-									error instanceof Error
-										? error.message
-										: "Transform error"
+									error instanceof Error ? error.message : "Transform error"
 								}`,
 							),
 						),
@@ -479,7 +468,9 @@ export const ModelServiceLive = Layer.succeed(ModelService, {
 	fetchModels: Effect.gen(function* () {
 		// 1. Check cache first
 		const cacheService = yield* CacheService
-		const cachedModels = yield* cacheService.get<Model[] | null>(CACHE_KEYS.MODELS)
+		const cachedModels = yield* cacheService.get<Model[] | null>(
+			CACHE_KEYS.MODELS,
+		)
 		if (cachedModels !== null) {
 			console.log(
 				`🎯 [ModelService] Using cached models (${cachedModels.length} models)`,

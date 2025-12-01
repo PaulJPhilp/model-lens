@@ -25,10 +25,7 @@ export const coverageConfig = {
 	/**
 	 * Files to include in coverage
 	 */
-	include: [
-		"lib/**/*.ts",
-		"src/**/*.ts",
-	],
+	include: ["lib/**/*.ts", "src/**/*.ts"],
 
 	/**
 	 * Files to exclude from coverage

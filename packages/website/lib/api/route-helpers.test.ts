@@ -1,9 +1,10 @@
 /* @vitest-environment node */
-import { describe, expect, it, vi, beforeEach } from "vitest"
+
 import { Effect } from "effect"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
-	createSuccessResponse,
 	createErrorResponse,
+	createSuccessResponse,
 	withTiming,
 } from "./route-helpers"
 
@@ -62,7 +63,11 @@ describe("Route Helpers", () => {
 			const startTime = Date.now()
 			const additionalMetadata = { source: "test", version: "1.0" }
 
-			const response = createSuccessResponse(testData, startTime, additionalMetadata)
+			const response = createSuccessResponse(
+				testData,
+				startTime,
+				additionalMetadata,
+			)
 			const json = await response.json()
 
 			expect(json.metadata.source).toBe("test")

@@ -1,5 +1,5 @@
-import { Effect } from "effect"
-import { HttpServerResponse, HttpBody } from "@effect/platform"
+import { type HttpBody, HttpServerResponse } from "@effect/platform"
+import type { Effect } from "effect"
 
 /**
  * Error response format
@@ -16,8 +16,11 @@ interface ErrorResponse {
  * Logs errors and returns standardized error responses
  */
 export const createErrorHandler = (
-	error: unknown
-): Effect.Effect<HttpServerResponse.HttpServerResponse, HttpBody.HttpBodyError> => {
+	error: unknown,
+): Effect.Effect<
+	HttpServerResponse.HttpServerResponse,
+	HttpBody.HttpBodyError
+> => {
 	const timestamp = new Date().toISOString()
 
 	// Handle different error types

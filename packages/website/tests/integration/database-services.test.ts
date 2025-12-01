@@ -1,6 +1,7 @@
 /* @vitest-environment node */
-import { describe, expect, it, beforeEach, afterEach } from "vitest"
+
 import { Effect, Layer } from "effect"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { ModelDataService } from "../../lib/services/ModelDataService"
 import { ModelDataServiceLive } from "../../lib/services/ModelDataServiceLive"
 import type { Model } from "../../lib/types"
@@ -60,7 +61,7 @@ describe("Database & Services Integration", () => {
 
 			try {
 				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(result).toBe(true)
 			} catch (error) {
@@ -90,7 +91,9 @@ describe("Database & Services Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+				await Effect.runPromise(
+					program.pipe(Effect.provide(ModelDataServiceLive)),
+				)
 			} catch (error) {
 				// Database unavailable
 				expect(error).toBeDefined()
@@ -104,10 +107,11 @@ describe("Database & Services Integration", () => {
 				// Try invalid sync ID - should fail gracefully
 				const result = yield* Effect.catchAll(
 					service.completeSync("invalid-id", 10, 10),
-					(error) => Effect.succeed({
-						error: true,
-						message: error instanceof Error ? error.message : String(error),
-					})
+					(error) =>
+						Effect.succeed({
+							error: true,
+							message: error instanceof Error ? error.message : String(error),
+						}),
 				)
 
 				return result
@@ -115,7 +119,7 @@ describe("Database & Services Integration", () => {
 
 			try {
 				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 
 				if ("error" in result && result.error) {
@@ -144,7 +148,9 @@ describe("Database & Services Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+				await Effect.runPromise(
+					program.pipe(Effect.provide(ModelDataServiceLive)),
+				)
 			} catch (error) {
 				// Database unavailable
 				expect(error).toBeDefined()
@@ -166,7 +172,9 @@ describe("Database & Services Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+				await Effect.runPromise(
+					program.pipe(Effect.provide(ModelDataServiceLive)),
+				)
 			} catch (error) {
 				// Database unavailable
 				expect(error).toBeDefined()
@@ -189,7 +197,7 @@ describe("Database & Services Integration", () => {
 
 			try {
 				const stats = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(stats).toBeDefined()
 			} catch (error) {
@@ -234,7 +242,7 @@ describe("Database & Services Integration", () => {
 
 			try {
 				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(result).toBe(true)
 			} catch (error) {
@@ -273,7 +281,9 @@ describe("Database & Services Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+				await Effect.runPromise(
+					program.pipe(Effect.provide(ModelDataServiceLive)),
+				)
 			} catch (error) {
 				// Database unavailable
 				expect(error).toBeDefined()
@@ -289,8 +299,16 @@ describe("Database & Services Integration", () => {
 				const sync2 = yield* service.startSync()
 
 				// Store different models in each
-				yield* service.storeModelBatch([createTestModel("sync1-m1")], sync1.id, "src1")
-				yield* service.storeModelBatch([createTestModel("sync2-m1")], sync2.id, "src2")
+				yield* service.storeModelBatch(
+					[createTestModel("sync1-m1")],
+					sync1.id,
+					"src1",
+				)
+				yield* service.storeModelBatch(
+					[createTestModel("sync2-m1")],
+					sync2.id,
+					"src2",
+				)
 
 				// Complete both
 				yield* service.completeSync(sync1.id, 1, 1)
@@ -311,7 +329,9 @@ describe("Database & Services Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+				await Effect.runPromise(
+					program.pipe(Effect.provide(ModelDataServiceLive)),
+				)
 			} catch (error) {
 				// Database unavailable
 				expect(error).toBeDefined()
@@ -334,7 +354,7 @@ describe("Database & Services Integration", () => {
 			})
 
 			const result = await Effect.runPromise(
-				program.pipe(Effect.provide(ModelDataServiceLive))
+				program.pipe(Effect.provide(ModelDataServiceLive)),
 			)
 			expect(result).toBe(true)
 		})
@@ -361,7 +381,9 @@ describe("Database & Services Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+				await Effect.runPromise(
+					program.pipe(Effect.provide(ModelDataServiceLive)),
+				)
 			} catch (error) {
 				// Database unavailable
 				expect(error).toBeDefined()
@@ -394,7 +416,9 @@ describe("Database & Services Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+				await Effect.runPromise(
+					program.pipe(Effect.provide(ModelDataServiceLive)),
+				)
 			} catch (error) {
 				// Database unavailable
 				expect(error).toBeDefined()
@@ -429,7 +453,9 @@ describe("Database & Services Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+				await Effect.runPromise(
+					program.pipe(Effect.provide(ModelDataServiceLive)),
+				)
 			} catch (error) {
 				// Database unavailable
 				expect(error).toBeDefined()
@@ -448,7 +474,7 @@ describe("Database & Services Integration", () => {
 						service.getSyncHistory(1),
 						service.getLatestModels(),
 					],
-					{ concurrency: "unbounded" }
+					{ concurrency: "unbounded" },
 				)
 
 				// All operations should succeed
@@ -462,7 +488,9 @@ describe("Database & Services Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+				await Effect.runPromise(
+					program.pipe(Effect.provide(ModelDataServiceLive)),
+				)
 			} catch (error) {
 				// Database unavailable
 				expect(error).toBeDefined()
@@ -493,7 +521,9 @@ describe("Database & Services Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+				await Effect.runPromise(
+					program.pipe(Effect.provide(ModelDataServiceLive)),
+				)
 			} catch (error) {
 				// Database unavailable
 				expect(error).toBeDefined()
@@ -525,7 +555,9 @@ describe("Database & Services Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+				await Effect.runPromise(
+					program.pipe(Effect.provide(ModelDataServiceLive)),
+				)
 			} catch (error) {
 				// Database unavailable
 				expect(error).toBeDefined()
@@ -539,13 +571,10 @@ describe("Database & Services Integration", () => {
 				const service = yield* ModelDataService
 
 				// Attempt operation that might fail
-				const result = yield* Effect.catchAll(
-					service.startSync(),
-					(error) => {
-						// Retry on error
-						return service.startSync()
-					}
-				)
+				const result = yield* Effect.catchAll(service.startSync(), (error) => {
+					// Retry on error
+					return service.startSync()
+				})
 
 				expect(result).toBeDefined()
 
@@ -553,7 +582,9 @@ describe("Database & Services Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+				await Effect.runPromise(
+					program.pipe(Effect.provide(ModelDataServiceLive)),
+				)
 			} catch (error) {
 				// Database unavailable
 				expect(error).toBeDefined()
@@ -567,7 +598,7 @@ describe("Database & Services Integration", () => {
 				// Try to complete non-existent sync
 				const result = yield* Effect.catchAll(
 					service.completeSync("non-existent", 0, 0),
-					(error) => Effect.succeed(null) // Degrade gracefully
+					(error) => Effect.succeed(null), // Degrade gracefully
 				)
 
 				// Should return null on error (graceful degradation)
@@ -577,7 +608,9 @@ describe("Database & Services Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+				await Effect.runPromise(
+					program.pipe(Effect.provide(ModelDataServiceLive)),
+				)
 			} catch (error) {
 				// Database unavailable
 				expect(error).toBeDefined()

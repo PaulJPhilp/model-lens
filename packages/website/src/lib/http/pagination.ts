@@ -1,12 +1,12 @@
-import { HttpServerRequest } from "@effect/platform"
+import type { HttpServerRequest } from "@effect/platform"
 
 /**
  * Pagination parameters extracted from query string
  */
 export interface PaginationParams {
-  page: number
-  pageSize: number
-  offset: number
+	page: number
+	pageSize: number
+	offset: number
 }
 
 /**
@@ -18,45 +18,45 @@ export interface PaginationParams {
  * @returns Validated pagination params with offset calculated
  */
 export const parsePaginationParams = (
-  request: HttpServerRequest.HttpServerRequest,
-  defaultPageSize = 20,
-  maxPageSize = 100
+	request: HttpServerRequest.HttpServerRequest,
+	defaultPageSize = 20,
+	maxPageSize = 100,
 ): PaginationParams => {
-  const searchParams = new URL(request.url).searchParams
+	const searchParams = new URL(request.url).searchParams
 
-  // Parse page number
-  const rawPage = searchParams.get("page")
-  const page = Math.max(1, parseInt(rawPage || "1", 10))
+	// Parse page number
+	const rawPage = searchParams.get("page")
+	const page = Math.max(1, parseInt(rawPage || "1", 10))
 
-  // Validate page is a valid number (not NaN)
-  const validPage = Number.isNaN(page) ? 1 : page
+	// Validate page is a valid number (not NaN)
+	const validPage = Number.isNaN(page) ? 1 : page
 
-  // Parse page size with validation
-  const rawPageSize = searchParams.get("pageSize")
-  const parsedPageSize = parseInt(rawPageSize || String(defaultPageSize), 10)
+	// Parse page size with validation
+	const rawPageSize = searchParams.get("pageSize")
+	const parsedPageSize = parseInt(rawPageSize || String(defaultPageSize), 10)
 
-  // Enforce bounds: at least 1, at most maxPageSize, default to defaultPageSize if invalid
-  let pageSize = defaultPageSize
-  if (!Number.isNaN(parsedPageSize)) {
-    pageSize = Math.max(1, Math.min(maxPageSize, parsedPageSize))
-  }
+	// Enforce bounds: at least 1, at most maxPageSize, default to defaultPageSize if invalid
+	let pageSize = defaultPageSize
+	if (!Number.isNaN(parsedPageSize)) {
+		pageSize = Math.max(1, Math.min(maxPageSize, parsedPageSize))
+	}
 
-  // Calculate offset for database queries
-  const offset = (validPage - 1) * pageSize
+	// Calculate offset for database queries
+	const offset = (validPage - 1) * pageSize
 
-  return { page: validPage, pageSize, offset }
+	return { page: validPage, pageSize, offset }
 }
 
 /**
  * Pagination metadata for responses
  */
 export interface PaginationMeta {
-  total: number
-  page: number
-  pageSize: number
-  totalPages: number
-  hasNextPage: boolean
-  hasPreviousPage: boolean
+	total: number
+	page: number
+	pageSize: number
+	totalPages: number
+	hasNextPage: boolean
+	hasPreviousPage: boolean
 }
 
 /**
@@ -64,20 +64,20 @@ export interface PaginationMeta {
  * Useful for including in response meta field
  */
 export const createPaginationMeta = (
-  total: number,
-  page: number,
-  pageSize: number
+	total: number,
+	page: number,
+	pageSize: number,
 ): PaginationMeta => {
-  const totalPages = Math.ceil(total / pageSize)
+	const totalPages = Math.ceil(total / pageSize)
 
-  return {
-    total,
-    page,
-    pageSize,
-    totalPages,
-    hasNextPage: page < totalPages,
-    hasPreviousPage: page > 1,
-  }
+	return {
+		total,
+		page,
+		pageSize,
+		totalPages,
+		hasNextPage: page < totalPages,
+		hasPreviousPage: page > 1,
+	}
 }
 
 /**
@@ -85,8 +85,8 @@ export const createPaginationMeta = (
  * More efficient for large datasets than offset-based pagination
  */
 export interface CursorPaginationParams {
-  cursor?: string
-  pageSize: number
+	cursor?: string
+	pageSize: number
 }
 
 /**
@@ -96,21 +96,21 @@ export interface CursorPaginationParams {
  * @param maxPageSize Maximum items per page (default: 100)
  */
 export const parseCursorPaginationParams = (
-  request: HttpServerRequest.HttpServerRequest,
-  defaultPageSize = 20,
-  maxPageSize = 100
+	request: HttpServerRequest.HttpServerRequest,
+	defaultPageSize = 20,
+	maxPageSize = 100,
 ): CursorPaginationParams => {
-  const searchParams = new URL(request.url).searchParams
+	const searchParams = new URL(request.url).searchParams
 
-  const rawPageSize = searchParams.get("pageSize")
-  const parsedPageSize = parseInt(rawPageSize || String(defaultPageSize), 10)
+	const rawPageSize = searchParams.get("pageSize")
+	const parsedPageSize = parseInt(rawPageSize || String(defaultPageSize), 10)
 
-  let pageSize = defaultPageSize
-  if (!Number.isNaN(parsedPageSize)) {
-    pageSize = Math.max(1, Math.min(maxPageSize, parsedPageSize))
-  }
+	let pageSize = defaultPageSize
+	if (!Number.isNaN(parsedPageSize)) {
+		pageSize = Math.max(1, Math.min(maxPageSize, parsedPageSize))
+	}
 
-  const cursor = searchParams.get("cursor") || undefined
+	const cursor = searchParams.get("cursor") || undefined
 
-  return { cursor, pageSize }
+	return { cursor, pageSize }
 }

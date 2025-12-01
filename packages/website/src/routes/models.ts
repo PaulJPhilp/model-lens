@@ -1,9 +1,9 @@
-import { Effect } from "effect"
 import { HttpRouter } from "@effect/platform"
+import { Effect } from "effect"
 import { ModelDataService } from "../../lib/services/ModelDataService"
 import {
-  createSuccessResponse,
-  internalServerError,
+	createSuccessResponse,
+	internalServerError,
 } from "../lib/http/responses"
 
 /**
@@ -20,19 +20,19 @@ import {
  * }
  */
 export const modelsRouter = HttpRouter.get(
-  "/v1/models",
-  Effect.gen(function* () {
-    const service = yield* ModelDataService
-    const models = yield* service.getLatestModels()
+	"/v1/models",
+	Effect.gen(function* () {
+		const service = yield* ModelDataService
+		const models = yield* service.getLatestModels()
 
-    return yield* createSuccessResponse(models, { total: models.length })
-  }).pipe(
-    Effect.catchAll((error) =>
-      internalServerError(
-        error instanceof Error
-          ? error.message
-          : "Failed to fetch models from database"
-      )
-    )
-  )
+		return yield* createSuccessResponse(models, { total: models.length })
+	}).pipe(
+		Effect.catchAll((error) =>
+			internalServerError(
+				error instanceof Error
+					? error.message
+					: "Failed to fetch models from database",
+			),
+		),
+	),
 )

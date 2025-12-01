@@ -1,12 +1,13 @@
 /* @vitest-environment node */
+
+import { eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
-import { describe, expect, it, beforeEach, afterEach } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { db } from "../../src/db"
+import { modelSnapshots, modelSyncs } from "../../src/db/schema.models"
+import type { Model } from "../types"
 import { ModelDataService } from "./ModelDataService"
 import { ModelDataServiceLive } from "./ModelDataServiceLive"
-import type { Model } from "../types"
-import { modelSyncs, modelSnapshots } from "../../src/db/schema.models"
-import { eq } from "drizzle-orm"
 
 describe("ModelDataService", () => {
 	let testSyncId: string
@@ -14,14 +15,13 @@ describe("ModelDataService", () => {
 	beforeEach(async () => {
 		// Clean up test data before each test
 		try {
-			await db.delete(modelSnapshots).where(eq(modelSnapshots.syncId, testSyncId || ""))
+			await db
+				.delete(modelSnapshots)
+				.where(eq(modelSnapshots.syncId, testSyncId || ""))
 			await db.delete(modelSyncs)
 		} catch (error) {
 			// Database might not exist in test environment - skip cleanup
-			if (
-				error instanceof Error &&
-				error.message.includes("does not exist")
-			) {
+			if (error instanceof Error && error.message.includes("does not exist")) {
 				console.log(
 					"ℹ️  Test database not available - skipping ModelDataService tests",
 				)
@@ -33,15 +33,14 @@ describe("ModelDataService", () => {
 		// Clean up test data after each test
 		try {
 			if (testSyncId) {
-				await db.delete(modelSnapshots).where(eq(modelSnapshots.syncId, testSyncId))
+				await db
+					.delete(modelSnapshots)
+					.where(eq(modelSnapshots.syncId, testSyncId))
 			}
 			await db.delete(modelSyncs)
 		} catch (error) {
 			// Database might not exist in test environment - skip cleanup
-			if (
-				error instanceof Error &&
-				error.message.includes("does not exist")
-			) {
+			if (error instanceof Error && error.message.includes("does not exist")) {
 				// Silently skip
 			}
 		}
@@ -55,7 +54,9 @@ describe("ModelDataService", () => {
 				return sync
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 
 			expect(result).toBeDefined()
 			expect(result.id).toBeTruthy()
@@ -71,7 +72,9 @@ describe("ModelDataService", () => {
 				return sync
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 
 			expect(result).toHaveProperty("id")
 			expect(result).toHaveProperty("status")
@@ -89,7 +92,9 @@ describe("ModelDataService", () => {
 				return { sync1, sync2 }
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 
 			expect(result.sync1.id).not.toBe(result.sync2.id)
 			testSyncId = result.sync1.id
@@ -142,7 +147,9 @@ describe("ModelDataService", () => {
 				return snapshots.length
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 			expect(result).toBe(1)
 		})
 
@@ -188,7 +195,9 @@ describe("ModelDataService", () => {
 				return snapshots.length
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 			expect(result).toBe(10)
 		})
 
@@ -236,7 +245,9 @@ describe("ModelDataService", () => {
 				return snapshots[0]?.source
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 			expect(result).toBe("models.dev")
 		})
 	})
@@ -254,17 +265,16 @@ describe("ModelDataService", () => {
 
 				const updated = yield* Effect.tryPromise({
 					try: () =>
-						db
-							.select()
-							.from(modelSyncs)
-							.where(eq(modelSyncs.id, sync.id)),
+						db.select().from(modelSyncs).where(eq(modelSyncs.id, sync.id)),
 					catch: (error) => new Error(String(error)),
 				})
 
 				return updated[0]
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 
 			expect(result.status).toBe("completed")
 			expect(result.totalFetched).toBe(100)
@@ -284,17 +294,19 @@ describe("ModelDataService", () => {
 
 				const updated = yield* Effect.tryPromise({
 					try: () =>
-						db
-							.select()
-							.from(modelSyncs)
-							.where(eq(modelSyncs.id, sync.id)),
+						db.select().from(modelSyncs).where(eq(modelSyncs.id, sync.id)),
 					catch: (error) => new Error(String(error)),
 				})
 
-				return { totalFetched: updated[0].totalFetched, totalStored: updated[0].totalStored }
+				return {
+					totalFetched: updated[0].totalFetched,
+					totalStored: updated[0].totalStored,
+				}
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 
 			expect(result.totalFetched).toBe(1250)
 			expect(result.totalStored).toBe(1245)
@@ -315,17 +327,16 @@ describe("ModelDataService", () => {
 
 				const updated = yield* Effect.tryPromise({
 					try: () =>
-						db
-							.select()
-							.from(modelSyncs)
-							.where(eq(modelSyncs.id, sync.id)),
+						db.select().from(modelSyncs).where(eq(modelSyncs.id, sync.id)),
 					catch: (error) => new Error(String(error)),
 				})
 
 				return updated[0]
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 
 			expect(result.status).toBe("failed")
 			expect(result.errorMessage).toBe("Network connection timeout")
@@ -391,7 +402,9 @@ describe("ModelDataService", () => {
 				return latestModels
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 
 			expect(Array.isArray(result)).toBe(true)
 			expect(result.length).toBe(2)
@@ -406,7 +419,9 @@ describe("ModelDataService", () => {
 				return latestModels
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 
 			expect(Array.isArray(result)).toBe(true)
 			expect(result.length).toBe(0)
@@ -452,7 +467,9 @@ describe("ModelDataService", () => {
 				return devModels
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 
 			expect(Array.isArray(result)).toBe(true)
 			expect(result.length).toBe(1)
@@ -496,7 +513,9 @@ describe("ModelDataService", () => {
 				return { sourceA: sourceAModels.length, sourceB: sourceBModels.length }
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 
 			expect(result.sourceA).toBe(1)
 			expect(result.sourceB).toBe(1)
@@ -513,7 +532,9 @@ describe("ModelDataService", () => {
 				return stats
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 
 			expect(result).toHaveProperty("totalModels")
 			expect(result).toHaveProperty("providers")
@@ -578,7 +599,9 @@ describe("ModelDataService", () => {
 				return stats
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 
 			expect(result.totalModels).toBeGreaterThan(0)
 			expect(Array.isArray(result.providers)).toBe(true)
@@ -603,7 +626,9 @@ describe("ModelDataService", () => {
 				return history
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 
 			expect(Array.isArray(result)).toBe(true)
 			expect(result.length).toBeGreaterThanOrEqual(2)
@@ -626,7 +651,9 @@ describe("ModelDataService", () => {
 				return history
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 
 			expect(result.length).toBeLessThanOrEqual(2)
 		})
@@ -649,7 +676,9 @@ describe("ModelDataService", () => {
 				return history.map((s) => s.id)
 			})
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 
 			// Should be in reverse order (most recent first)
 			expect(result[0]).toBeTruthy()
@@ -678,7 +707,9 @@ describe("ModelDataService", () => {
 				),
 			)
 
-			const result = await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+			const result = await Effect.runPromise(
+				program.pipe(Effect.provide(ModelDataServiceLive)),
+			)
 			expect(result.error).toBe(true)
 		})
 	})

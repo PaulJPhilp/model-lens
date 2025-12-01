@@ -1,14 +1,14 @@
 // Minimal test setup file
-import { afterAll, beforeAll, vi } from 'vitest'
+import { afterAll, beforeAll, vi } from "vitest"
 
 vi.mock("server-only", () => {
-  return {}
+	return {}
 })
 
 beforeAll(() => {
-  // Global setup if needed
+	// Global setup if needed
 })
 
 afterAll(() => {
-  // Global teardown if needed
+	// Global teardown if needed
 })

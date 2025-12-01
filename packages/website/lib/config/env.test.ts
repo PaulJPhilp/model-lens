@@ -1,7 +1,7 @@
 /* @vitest-environment node */
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
-import { validateApiKey, getValidatedApiKey } from "./env"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { EnvironmentConfig } from "./env"
+import { getValidatedApiKey, validateApiKey } from "./env"
 
 describe("Environment Configuration", () => {
 	beforeEach(() => {
@@ -320,9 +320,7 @@ describe("Environment Configuration", () => {
 
 			expect(consoleWarn).toHaveBeenCalled()
 			const warns = consoleWarn.mock.calls.map((c) => c[0])
-			const warningAboutProduction = warns.find((w) =>
-				w.includes("production"),
-			)
+			const warningAboutProduction = warns.find((w) => w.includes("production"))
 			expect(warningAboutProduction).toBeDefined()
 		})
 	})

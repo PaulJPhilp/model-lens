@@ -1,7 +1,8 @@
 /* @vitest-environment node */
-import { describe, expect, it, beforeEach, afterEach } from "vitest"
-import { Effect, Layer } from "effect"
+
 import { HttpRouter, HttpServerRequest } from "@effect/platform"
+import { Effect, Layer } from "effect"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { ModelDataService } from "../../lib/services/ModelDataService"
 import { ModelDataServiceLive } from "../../lib/services/ModelDataServiceLive"
 import {
@@ -29,7 +30,9 @@ describe("API Routes Integration", () => {
 				const models = yield* service.getLatestModels()
 
 				// Simulate response formatting
-				const response = yield* createSuccessResponse(models, { total: models.length })
+				const response = yield* createSuccessResponse(models, {
+					total: models.length,
+				})
 
 				expect(response).toBeDefined()
 				expect(response).toHaveProperty("data")
@@ -40,7 +43,7 @@ describe("API Routes Integration", () => {
 
 			try {
 				const response = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(response).toBeDefined()
 			} catch (error) {
@@ -57,14 +60,16 @@ describe("API Routes Integration", () => {
 				// Empty array is valid response
 				expect(Array.isArray(models)).toBe(true)
 
-				const response = yield* createSuccessResponse(models, { total: models.length })
+				const response = yield* createSuccessResponse(models, {
+					total: models.length,
+				})
 
 				return response
 			})
 
 			try {
 				const response = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(response).toBeDefined()
 			} catch (error) {
@@ -78,7 +83,9 @@ describe("API Routes Integration", () => {
 				const service = yield* ModelDataService
 				const models = yield* service.getLatestModels()
 
-				const response = yield* createSuccessResponse(models, { total: models.length })
+				const response = yield* createSuccessResponse(models, {
+					total: models.length,
+				})
 
 				expect(response).toHaveProperty("meta")
 				expect(response.meta).toHaveProperty("total")
@@ -88,7 +95,9 @@ describe("API Routes Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+				await Effect.runPromise(
+					program.pipe(Effect.provide(ModelDataServiceLive)),
+				)
 			} catch (error) {
 				// Skip if database unavailable
 				expect(error).toBeDefined()
@@ -100,7 +109,9 @@ describe("API Routes Integration", () => {
 				const service = yield* ModelDataService
 				const models = yield* service.getLatestModels()
 
-				const response = yield* createSuccessResponse(models, { total: models.length })
+				const response = yield* createSuccessResponse(models, {
+					total: models.length,
+				})
 
 				expect(response).toHaveProperty("timestamp")
 				expect(typeof response.timestamp).toBe("string")
@@ -113,7 +124,9 @@ describe("API Routes Integration", () => {
 			})
 
 			try {
-				await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+				await Effect.runPromise(
+					program.pipe(Effect.provide(ModelDataServiceLive)),
+				)
 			} catch (error) {
 				// Skip if database unavailable
 				expect(error).toBeDefined()
@@ -126,10 +139,11 @@ describe("API Routes Integration", () => {
 
 				const result = yield* Effect.catchAll(
 					service.getLatestModels(),
-					(error) => Effect.succeed({
-						error: true,
-						message: error instanceof Error ? error.message : String(error),
-					})
+					(error) =>
+						Effect.succeed({
+							error: true,
+							message: error instanceof Error ? error.message : String(error),
+						}),
 				)
 
 				expect(result).toBeDefined()
@@ -145,7 +159,7 @@ describe("API Routes Integration", () => {
 
 			try {
 				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(result).toBeDefined()
 			} catch (error) {
@@ -174,7 +188,7 @@ describe("API Routes Integration", () => {
 
 			try {
 				const count = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(typeof count).toBe("number")
 			} catch (error) {
@@ -199,8 +213,8 @@ describe("API Routes Integration", () => {
 
 			const result = await Effect.runPromise(
 				Effect.catchAll(program, (error) =>
-					Effect.succeed({ error: true, message: error.message })
-				)
+					Effect.succeed({ error: true, message: error.message }),
+				),
 			)
 
 			if ("error" in result && result.error) {
@@ -247,7 +261,8 @@ describe("API Routes Integration", () => {
 
 		it("should return helpful message in sync response", async () => {
 			const program = Effect.gen(function* () {
-				const message = "Model sync initiated. Check /v1/admin/sync/history for status."
+				const message =
+					"Model sync initiated. Check /v1/admin/sync/history for status."
 
 				// Verify message content
 				expect(message).toContain("Check /v1/admin/sync/history")
@@ -279,8 +294,8 @@ describe("API Routes Integration", () => {
 
 			const result = await Effect.runPromise(
 				Effect.catchAll(program, (error) =>
-					Effect.succeed({ error: true, message: error.message })
-				)
+					Effect.succeed({ error: true, message: error.message }),
+				),
 			)
 
 			expect(result.error).toBe(true)
@@ -296,14 +311,16 @@ describe("API Routes Integration", () => {
 
 				expect(Array.isArray(history)).toBe(true)
 
-				const response = yield* createSuccessResponse(history, { total: history.length })
+				const response = yield* createSuccessResponse(history, {
+					total: history.length,
+				})
 
 				return response
 			})
 
 			try {
 				const response = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(response).toBeDefined()
 			} catch (error) {
@@ -328,7 +345,7 @@ describe("API Routes Integration", () => {
 
 			try {
 				const count = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(count).toBeLessThanOrEqual(10)
 			} catch (error) {
@@ -342,7 +359,10 @@ describe("API Routes Integration", () => {
 				// Simulate limit parameter validation
 				const rawLimit = "500"
 				const parsedLimit = parseInt(rawLimit, 10)
-				const limit = Math.max(1, Math.min(100, Number.isNaN(parsedLimit) ? 10 : parsedLimit))
+				const limit = Math.max(
+					1,
+					Math.min(100, Number.isNaN(parsedLimit) ? 10 : parsedLimit),
+				)
 
 				expect(limit).toBeLessThanOrEqual(100)
 				expect(limit).toBe(100)
@@ -359,7 +379,10 @@ describe("API Routes Integration", () => {
 				// Simulate limit parameter validation with negative/zero input
 				const rawLimit = "-5"
 				const parsedLimit = parseInt(rawLimit, 10)
-				const limit = Math.max(1, Math.min(100, Number.isNaN(parsedLimit) ? 10 : parsedLimit))
+				const limit = Math.max(
+					1,
+					Math.min(100, Number.isNaN(parsedLimit) ? 10 : parsedLimit),
+				)
 
 				expect(limit).toBeGreaterThanOrEqual(1)
 				expect(limit).toBe(1)
@@ -376,7 +399,10 @@ describe("API Routes Integration", () => {
 				// Simulate invalid limit (NaN)
 				const rawLimit = "invalid"
 				const parsedLimit = parseInt(rawLimit, 10)
-				const limit = Math.max(1, Math.min(100, Number.isNaN(parsedLimit) ? 10 : parsedLimit))
+				const limit = Math.max(
+					1,
+					Math.min(100, Number.isNaN(parsedLimit) ? 10 : parsedLimit),
+				)
 
 				// Should default to 10
 				expect(limit).toBe(10)
@@ -405,7 +431,7 @@ describe("API Routes Integration", () => {
 
 			try {
 				const hasHistory = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(typeof hasHistory).toBe("boolean")
 			} catch (error) {
@@ -419,10 +445,9 @@ describe("API Routes Integration", () => {
 				const service = yield* ModelDataService
 				const history = yield* service.getSyncHistory()
 
-				const response = yield* createSuccessResponse(
-					history.slice(0, 10),
-					{ total: history.length }
-				)
+				const response = yield* createSuccessResponse(history.slice(0, 10), {
+					total: history.length,
+				})
 
 				expect(response.meta).toHaveProperty("total")
 				expect(response.meta.total).toBe(history.length)
@@ -432,7 +457,7 @@ describe("API Routes Integration", () => {
 
 			try {
 				const response = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(response).toBeDefined()
 			} catch (error) {
@@ -454,8 +479,8 @@ describe("API Routes Integration", () => {
 
 			const result = await Effect.runPromise(
 				Effect.catchAll(program, (error) =>
-					Effect.succeed({ error: true, message: error.message })
-				)
+					Effect.succeed({ error: true, message: error.message }),
+				),
 			)
 
 			expect(result.error).toBe(true)
@@ -469,7 +494,9 @@ describe("API Routes Integration", () => {
 				const service = yield* ModelDataService
 				const models = yield* service.getLatestModels()
 
-				const response = yield* createSuccessResponse(models, { total: models.length })
+				const response = yield* createSuccessResponse(models, {
+					total: models.length,
+				})
 
 				expect(response).toHaveProperty("timestamp")
 				expect(typeof response.timestamp).toBe("string")
@@ -480,7 +507,7 @@ describe("API Routes Integration", () => {
 
 			try {
 				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(result).toBe(true)
 			} catch (error) {
@@ -494,7 +521,9 @@ describe("API Routes Integration", () => {
 				const service = yield* ModelDataService
 				const models = yield* service.getLatestModels()
 
-				const response = yield* createSuccessResponse(models, { total: models.length })
+				const response = yield* createSuccessResponse(models, {
+					total: models.length,
+				})
 
 				// All responses should have this structure
 				expect(response).toHaveProperty("data")
@@ -502,16 +531,16 @@ describe("API Routes Integration", () => {
 				expect(response).toHaveProperty("timestamp")
 
 				// data should contain the actual response
-				expect(Array.isArray(response.data) || typeof response.data === "object").toBe(
-					true
-				)
+				expect(
+					Array.isArray(response.data) || typeof response.data === "object",
+				).toBe(true)
 
 				return true
 			})
 
 			try {
 				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(result).toBe(true)
 			} catch (error) {
@@ -527,9 +556,10 @@ describe("API Routes Integration", () => {
 				// Simulate service error
 				const error = new Error("Database connection failed")
 
-				const response = yield* Effect.catchAll(
-					Effect.fail(error),
-					(err) => internalServerError(err instanceof Error ? err.message : "Unknown error")
+				const response = yield* Effect.catchAll(Effect.fail(error), (err) =>
+					internalServerError(
+						err instanceof Error ? err.message : "Unknown error",
+					),
 				)
 
 				return response

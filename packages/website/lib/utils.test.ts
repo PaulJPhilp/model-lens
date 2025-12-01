@@ -101,12 +101,17 @@ describe("Utils", () => {
 		})
 
 		it("should handle dark mode classes", () => {
-			const result = cn("bg-white dark:bg-gray-900", "text-black dark:text-white")
+			const result = cn(
+				"bg-white dark:bg-gray-900",
+				"text-black dark:text-white",
+			)
 			expect(result).toContain("dark:")
 		})
 
 		it("should handle arbitrary values", () => {
-			const result = cn("[mask-image:linear-gradient(90deg,black,rgba(0,0,0,0))]")
+			const result = cn(
+				"[mask-image:linear-gradient(90deg,black,rgba(0,0,0,0))]",
+			)
 			expect(result).toContain("mask-image")
 		})
 
@@ -132,15 +137,7 @@ describe("Utils", () => {
 		})
 
 		it("should handle all falsy values", () => {
-			const result = cn(
-				null,
-				undefined,
-				false,
-				0,
-				"",
-				NaN,
-				"bg-blue-500",
-			)
+			const result = cn(null, undefined, false, 0, "", NaN, "bg-blue-500")
 			expect(result).toBe("bg-blue-500")
 		})
 

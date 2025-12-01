@@ -5,10 +5,10 @@
  * in integration and E2E tests.
  */
 
-import { db } from "../../src/db"
-import { modelSyncs, modelSnapshots } from "../../src/db/schema.models"
 import { eq } from "drizzle-orm"
 import type { Model } from "../../lib/types"
+import { db } from "../../src/db"
+import { modelSnapshots, modelSyncs } from "../../src/db/schema.models"
 
 /**
  * Database Setup and Teardown
@@ -36,7 +36,9 @@ export const dbSetup = {
 			await db.select().from(modelSyncs).limit(1)
 			console.log("✅ Database initialized successfully")
 		} catch (error) {
-			console.warn("⚠️  Database unavailable - tests will skip database operations")
+			console.warn(
+				"⚠️  Database unavailable - tests will skip database operations",
+			)
 		}
 	},
 
@@ -57,7 +59,10 @@ export const dbSetup = {
 			}
 		} catch (error) {
 			// Gracefully handle cleanup errors
-			console.warn("⚠️  Database cleanup failed:", error instanceof Error ? error.message : String(error))
+			console.warn(
+				"⚠️  Database cleanup failed:",
+				error instanceof Error ? error.message : String(error),
+			)
 		}
 	},
 
@@ -120,7 +125,9 @@ export const testData = {
 
 			return sync
 		} catch (error) {
-			throw new Error(`Failed to create test sync: ${error instanceof Error ? error.message : String(error)}`)
+			throw new Error(
+				`Failed to create test sync: ${error instanceof Error ? error.message : String(error)}`,
+			)
 		}
 	},
 
@@ -130,7 +137,7 @@ export const testData = {
 	createSnapshots: async (
 		syncId: string,
 		models: Model[],
-		source: string = "test-source"
+		source: string = "test-source",
 	): Promise<void> => {
 		try {
 			const snapshots = models.map((model) => ({
@@ -142,7 +149,7 @@ export const testData = {
 			await db.insert(modelSnapshots).values(snapshots)
 		} catch (error) {
 			throw new Error(
-				`Failed to create test snapshots: ${error instanceof Error ? error.message : String(error)}`
+				`Failed to create test snapshots: ${error instanceof Error ? error.message : String(error)}`,
 			)
 		}
 	},
@@ -152,7 +159,10 @@ export const testData = {
 	 */
 	getSync: async (syncId: string) => {
 		try {
-			const [sync] = await db.select().from(modelSyncs).where(eq(modelSyncs.id, syncId))
+			const [sync] = await db
+				.select()
+				.from(modelSyncs)
+				.where(eq(modelSyncs.id, syncId))
 			return sync || null
 		} catch (error) {
 			return null
@@ -164,7 +174,10 @@ export const testData = {
 	 */
 	getSnapshots: async (syncId: string) => {
 		try {
-			return await db.select().from(modelSnapshots).where(eq(modelSnapshots.syncId, syncId))
+			return await db
+				.select()
+				.from(modelSnapshots)
+				.where(eq(modelSnapshots.syncId, syncId))
 		} catch (error) {
 			return []
 		}
@@ -244,7 +257,7 @@ export const dbTransactions = {
 	 */
 	verifyAtomicity: async (
 		operation: () => Promise<void>,
-		expectedSyncCount: number
+		expectedSyncCount: number,
 	): Promise<boolean> => {
 		try {
 			const beforeStats = await dbSetup.getStats()
@@ -265,7 +278,7 @@ export const dbTransactions = {
 	verifyRollback: async (
 		successOperation: () => Promise<void>,
 		failedOperation: () => Promise<void>,
-		expectedFinalState: (stats: any) => boolean
+		expectedFinalState: (stats: any) => boolean,
 	): Promise<boolean> => {
 		try {
 			const beforeStats = await dbSetup.getStats()
@@ -296,8 +309,8 @@ export const dbQueries = {
 	/**
 	 * Measure query performance
 	 */
-	measureQuery: async <T,>(
-		queryFn: () => Promise<T>
+	measureQuery: async <T>(
+		queryFn: () => Promise<T>,
 	): Promise<{ result: T; duration: number }> => {
 		const start = Date.now()
 		const result = await queryFn()
@@ -319,13 +332,14 @@ export const dbQueries = {
 			// Measure 5 queries to get average
 			for (let i = 0; i < 5; i++) {
 				const { duration } = await dbQueries.measureQuery(() =>
-					db.select().from(modelSyncs).limit(1)
+					db.select().from(modelSyncs).limit(1),
 				)
 				measurements.push(duration)
 			}
 
 			const stats = await dbSetup.getStats()
-			const avgTime = measurements.reduce((a, b) => a + b, 0) / measurements.length
+			const avgTime =
+				measurements.reduce((a, b) => a + b, 0) / measurements.length
 
 			return {
 				estimatedRowCount: stats.syncCount,
@@ -383,7 +397,9 @@ export const testFixtures = {
 
 			return { sync, models: testModels }
 		} catch (error) {
-			throw new Error(`Failed to setup complete sync: ${error instanceof Error ? error.message : String(error)}`)
+			throw new Error(
+				`Failed to setup complete sync: ${error instanceof Error ? error.message : String(error)}`,
+			)
 		}
 	},
 
@@ -427,7 +443,9 @@ export const testFixtures = {
 
 			return { sync, models: testModels }
 		} catch (error) {
-			throw new Error(`Failed to setup partial sync: ${error instanceof Error ? error.message : String(error)}`)
+			throw new Error(
+				`Failed to setup partial sync: ${error instanceof Error ? error.message : String(error)}`,
+			)
 		}
 	},
 
@@ -446,9 +464,9 @@ export const dbContext = {
 	/**
 	 * Run operation with database context (setup/teardown)
 	 */
-	run: async <T,>(
+	run: async <T>(
 		operation: (context: typeof testData) => Promise<T>,
-		cleanup: boolean = true
+		cleanup: boolean = true,
 	): Promise<T> => {
 		try {
 			const result = await operation(testData)
@@ -466,9 +484,9 @@ export const dbContext = {
 	/**
 	 * Run operation with automatic sync cleanup
 	 */
-	runWithSync: async <T,>(
+	runWithSync: async <T>(
 		operation: (syncId: string) => Promise<T>,
-		cleanup: boolean = true
+		cleanup: boolean = true,
 	): Promise<T> => {
 		try {
 			const sync = await testData.createSync()

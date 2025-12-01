@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest"
-import { ApiError, NetworkError, UnknownError, ValidationError, AppError, type AppErrorCause } from "./errors"
+import {
+	ApiError,
+	AppError,
+	type AppErrorCause,
+	NetworkError,
+	UnknownError,
+	ValidationError,
+} from "./errors"
 
 describe("Error Types", () => {
 	describe("ApiError", () => {
@@ -211,7 +218,9 @@ describe("Error Types", () => {
 			]
 
 			const apiErrors = causes.filter((c) => c._tag === "ApiError")
-			const validationErrors = causes.filter((c) => c._tag === "ValidationError")
+			const validationErrors = causes.filter(
+				(c) => c._tag === "ValidationError",
+			)
 			const networkErrors = causes.filter((c) => c._tag === "NetworkError")
 			const unknownErrors = causes.filter((c) => c._tag === "UnknownError")
 
@@ -262,9 +271,12 @@ describe("Error Types", () => {
 
 			errors.forEach((error) => {
 				expect(error._tag).toBeTruthy()
-				expect(["ApiError", "ValidationError", "NetworkError", "UnknownError"]).toContain(
-					error._tag,
-				)
+				expect([
+					"ApiError",
+					"ValidationError",
+					"NetworkError",
+					"UnknownError",
+				]).toContain(error._tag)
 			})
 		})
 	})

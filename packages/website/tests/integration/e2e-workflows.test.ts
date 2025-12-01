@@ -1,6 +1,7 @@
 /* @vitest-environment node */
-import { describe, expect, it } from "vitest"
+
 import { Effect, Layer } from "effect"
+import { describe, expect, it } from "vitest"
 import { ModelDataService } from "../../lib/services/ModelDataService"
 import { ModelDataServiceLive } from "../../lib/services/ModelDataServiceLive"
 import type { Model } from "../../lib/types"
@@ -64,9 +65,7 @@ describe("E2E Workflows", () => {
 					createModel("claude-3-opus", "anthropic", 0.015),
 					createModel("claude-3-sonnet", "anthropic", 0.003),
 				]
-				const googleModels = [
-					createModel("gemini-pro", "google", 0.0005),
-				]
+				const googleModels = [createModel("gemini-pro", "google", 0.0005)]
 
 				// 3. Store models from each source
 				console.log("💾 Storing models from each source...")
@@ -76,7 +75,8 @@ describe("E2E Workflows", () => {
 
 				// 4. Complete sync
 				console.log("✅ Completing sync...")
-				const totalModels = openaiModels.length + anthropicModels.length + googleModels.length
+				const totalModels =
+					openaiModels.length + anthropicModels.length + googleModels.length
 				yield* service.completeSync(sync.id, totalModels, totalModels)
 
 				// 5. Verify completion
@@ -105,7 +105,7 @@ describe("E2E Workflows", () => {
 
 			try {
 				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				console.log("✅ E2E sync workflow completed:", result)
 				expect(result.modelsStored).toBe(5)
@@ -126,7 +126,7 @@ describe("E2E Workflows", () => {
 				yield* service.storeModelBatch(
 					[createModel("m1", "source1")],
 					sync.id,
-					"source1"
+					"source1",
 				)
 
 				// 3. Simulate failure
@@ -143,7 +143,7 @@ describe("E2E Workflows", () => {
 				yield* service.storeModelBatch(
 					[createModel("m2", "source1")],
 					recoverSync.id,
-					"source1"
+					"source1",
 				)
 				yield* service.completeSync(recoverSync.id, 1, 1)
 
@@ -157,7 +157,7 @@ describe("E2E Workflows", () => {
 
 			try {
 				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(result.failedSyncId).not.toBe(result.recoveredSyncId)
 			} catch (error) {
@@ -180,14 +180,30 @@ describe("E2E Workflows", () => {
 				const gpt4FromAltSource = createModel("gpt-4", "openai", 0.03)
 
 				// 3. Store from different sources
-				yield* service.storeModelBatch([gpt4FromModelsdev], sync.id, "models.dev")
-				yield* service.storeModelBatch([gpt4FromOpenrouter], sync.id, "openrouter")
-				yield* service.storeModelBatch([gpt4FromAltSource], sync.id, "huggingface")
+				yield* service.storeModelBatch(
+					[gpt4FromModelsdev],
+					sync.id,
+					"models.dev",
+				)
+				yield* service.storeModelBatch(
+					[gpt4FromOpenrouter],
+					sync.id,
+					"openrouter",
+				)
+				yield* service.storeModelBatch(
+					[gpt4FromAltSource],
+					sync.id,
+					"huggingface",
+				)
 
 				// 4. Store unique models
 				const claudeModel = createModel("claude-3", "anthropic", 0.015)
 				const geminiModel = createModel("gemini-pro", "google", 0.0005)
-				yield* service.storeModelBatch([claudeModel, geminiModel], sync.id, "all-sources")
+				yield* service.storeModelBatch(
+					[claudeModel, geminiModel],
+					sync.id,
+					"all-sources",
+				)
 
 				yield* service.completeSync(sync.id, 5, 5)
 
@@ -220,7 +236,7 @@ describe("E2E Workflows", () => {
 
 			try {
 				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(result.stats.providers.length).toBeGreaterThanOrEqual(3)
 			} catch (error) {
@@ -235,15 +251,19 @@ describe("E2E Workflows", () => {
 				const sync = yield* service.startSync()
 
 				// Create models with different pricing
-				const premiumModel = createModel("premium-ai", "premium-provider", 0.10)
-				const midRangeModel = createModel("mid-range-ai", "standard-provider", 0.01)
+				const premiumModel = createModel("premium-ai", "premium-provider", 0.1)
+				const midRangeModel = createModel(
+					"mid-range-ai",
+					"standard-provider",
+					0.01,
+				)
 				const budgetModel = createModel("budget-ai", "budget-provider", 0.0001)
 				const freeModel = createModel("free-ai", "free-provider", 0)
 
 				yield* service.storeModelBatch(
 					[premiumModel, midRangeModel, budgetModel, freeModel],
 					sync.id,
-					"pricing-test"
+					"pricing-test",
 				)
 				yield* service.completeSync(sync.id, 4, 4)
 
@@ -257,7 +277,9 @@ describe("E2E Workflows", () => {
 
 				const hasFree = pricingData.some((p) => p.inputCost === 0)
 				const hasPremium = pricingData.some((p) => p.inputCost > 0.05)
-				const hasBudget = pricingData.some((p) => p.inputCost > 0 && p.inputCost < 0.01)
+				const hasBudget = pricingData.some(
+					(p) => p.inputCost > 0 && p.inputCost < 0.01,
+				)
 
 				expect(hasFree).toBe(true)
 				expect(hasPremium || hasBudget).toBe(true)
@@ -267,7 +289,7 @@ describe("E2E Workflows", () => {
 
 			try {
 				const count = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(count).toBeGreaterThanOrEqual(4)
 			} catch (error) {
@@ -290,7 +312,7 @@ describe("E2E Workflows", () => {
 						createModel("openai-2", "openai"),
 					],
 					sync.id,
-					"openai"
+					"openai",
 				)
 				yield* service.storeModelBatch(
 					[
@@ -299,7 +321,7 @@ describe("E2E Workflows", () => {
 						createModel("anthropic-3", "anthropic"),
 					],
 					sync.id,
-					"anthropic"
+					"anthropic",
 				)
 
 				yield* service.completeSync(sync.id, 5, 5)
@@ -310,7 +332,8 @@ describe("E2E Workflows", () => {
 
 				// 2. Get by source
 				const openaiModels = yield* service.getLatestModelsBySource("openai")
-				const anthropicModels = yield* service.getLatestModelsBySource("anthropic")
+				const anthropicModels =
+					yield* service.getLatestModelsBySource("anthropic")
 
 				expect(openaiModels.some((m) => m.id === "openai-1")).toBe(true)
 				expect(anthropicModels.some((m) => m.id === "anthropic-1")).toBe(true)
@@ -325,9 +348,11 @@ describe("E2E Workflows", () => {
 
 			try {
 				const counts = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
-				expect(counts.total).toBeGreaterThanOrEqual(counts.openai + counts.anthropic)
+				expect(counts.total).toBeGreaterThanOrEqual(
+					counts.openai + counts.anthropic,
+				)
 			} catch (error) {
 				expect(error).toBeDefined()
 			}
@@ -339,11 +364,19 @@ describe("E2E Workflows", () => {
 
 				// Create multiple syncs
 				const sync1 = yield* service.startSync()
-				yield* service.storeModelBatch([createModel("s1m1", "p1")], sync1.id, "p1")
+				yield* service.storeModelBatch(
+					[createModel("s1m1", "p1")],
+					sync1.id,
+					"p1",
+				)
 				yield* service.completeSync(sync1.id, 1, 1)
 
 				const sync2 = yield* service.startSync()
-				yield* service.storeModelBatch([createModel("s2m1", "p2")], sync2.id, "p2")
+				yield* service.storeModelBatch(
+					[createModel("s2m1", "p2")],
+					sync2.id,
+					"p2",
+				)
 				yield* service.completeSync(sync2.id, 1, 1)
 
 				// Get history
@@ -368,7 +401,7 @@ describe("E2E Workflows", () => {
 
 			try {
 				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(result.totalModels).toBeGreaterThanOrEqual(2)
 			} catch (error) {
@@ -388,7 +421,7 @@ describe("E2E Workflows", () => {
 				yield* service.storeModelBatch(
 					[createModel("working-1", "working-provider")],
 					sync.id,
-					"working-source"
+					"working-source",
 				)
 
 				// Complete despite partial failure
@@ -403,7 +436,7 @@ describe("E2E Workflows", () => {
 
 			try {
 				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(result).toBe(true)
 			} catch (error) {
@@ -419,13 +452,17 @@ describe("E2E Workflows", () => {
 				const sync1 = yield* service.startSync()
 				const error1 = yield* Effect.catchAll(
 					service.completeSync("invalid", 0, 0),
-					() => Effect.succeed("failed as expected")
+					() => Effect.succeed("failed as expected"),
 				)
 				expect(error1).toBe("failed as expected")
 
 				// 2. Successful recovery
 				const sync2 = yield* service.startSync()
-				yield* service.storeModelBatch([createModel("recovery", "test")], sync2.id, "test")
+				yield* service.storeModelBatch(
+					[createModel("recovery", "test")],
+					sync2.id,
+					"test",
+				)
 				yield* service.completeSync(sync2.id, 1, 1)
 
 				// 3. Verify recovery
@@ -437,7 +474,9 @@ describe("E2E Workflows", () => {
 			})
 
 			try {
-				await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+				await Effect.runPromise(
+					program.pipe(Effect.provide(ModelDataServiceLive)),
+				)
 			} catch (error) {
 				expect(error).toBeDefined()
 			}
@@ -452,16 +491,25 @@ describe("E2E Workflows", () => {
 				// 1. Create sync with specific test data
 				const sync = yield* service.startSync()
 
-				const originalModel = createModel("integrity-test", "integrity-provider", 0.00123)
+				const originalModel = createModel(
+					"integrity-test",
+					"integrity-provider",
+					0.00123,
+				)
 				originalModel.contextWindow = 8192
 				originalModel.capabilities = ["chat", "completion", "embedding"]
 
 				// 2. Store with specific values
-				yield* service.storeModelBatch([originalModel], sync.id, "integrity-provider")
+				yield* service.storeModelBatch(
+					[originalModel],
+					sync.id,
+					"integrity-provider",
+				)
 				yield* service.completeSync(sync.id, 1, 1)
 
 				// 3. Retrieve and verify all fields preserved
-				const retrieved = yield* service.getLatestModelsBySource("integrity-provider")
+				const retrieved =
+					yield* service.getLatestModelsBySource("integrity-provider")
 				const found = retrieved.find((m) => m.id === "integrity-test")
 
 				expect(found).toBeDefined()
@@ -478,7 +526,7 @@ describe("E2E Workflows", () => {
 
 			try {
 				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive))
+					program.pipe(Effect.provide(ModelDataServiceLive)),
 				)
 				expect(result).toBe(true)
 			} catch (error) {
@@ -514,7 +562,9 @@ describe("E2E Workflows", () => {
 			})
 
 			try {
-				await Effect.runPromise(program.pipe(Effect.provide(ModelDataServiceLive)))
+				await Effect.runPromise(
+					program.pipe(Effect.provide(ModelDataServiceLive)),
+				)
 			} catch (error) {
 				expect(error).toBeDefined()
 			}
@@ -522,45 +572,58 @@ describe("E2E Workflows", () => {
 	})
 
 	describe("performance under realistic load", () => {
-		it("should handle complete workflow with many models", async () => {
-			const program = Effect.gen(function* () {
-				const service = yield* ModelDataService
+		it(
+			"should handle complete workflow with many models",
+			async () => {
+				const program = Effect.gen(function* () {
+					const service = yield* ModelDataService
 
-				const sync = yield* service.startSync()
-				const startTime = Date.now()
+					const sync = yield* service.startSync()
+					const startTime = Date.now()
 
-				// Create large batch
-				const models: Model[] = []
-				for (let i = 0; i < 50; i++) {
-					models.push(createModel(`perf-model-${i}`, `provider-${i % 5}`, 0.001 * (i + 1)))
+					// Create large batch
+					const models: Model[] = []
+					for (let i = 0; i < 50; i++) {
+						models.push(
+							createModel(
+								`perf-model-${i}`,
+								`provider-${i % 5}`,
+								0.001 * (i + 1),
+							),
+						)
+					}
+
+					// Store in batches
+					yield* service.storeModelBatch(models.slice(0, 25), sync.id, "batch1")
+					yield* service.storeModelBatch(models.slice(25), sync.id, "batch2")
+					yield* service.completeSync(sync.id, 50, 50)
+
+					// Query results
+					const allModels = yield* service.getLatestModels()
+					const stats = yield* service.getModelDataStats()
+
+					const duration = Date.now() - startTime
+
+					expect(duration).toBeLessThan(10000) // Should complete in reasonable time
+					expect(allModels.length).toBeGreaterThanOrEqual(50)
+					expect(stats.totalModels).toBeGreaterThanOrEqual(50)
+
+					return { duration, modelCount: allModels.length }
+				})
+
+				try {
+					const result = await Effect.runPromise(
+						program.pipe(
+							Effect.provide(ModelDataServiceLive),
+							Effect.timeout(15000),
+						),
+					)
+					expect(result.modelCount).toBeGreaterThanOrEqual(50)
+				} catch (error) {
+					expect(error).toBeDefined()
 				}
-
-				// Store in batches
-				yield* service.storeModelBatch(models.slice(0, 25), sync.id, "batch1")
-				yield* service.storeModelBatch(models.slice(25), sync.id, "batch2")
-				yield* service.completeSync(sync.id, 50, 50)
-
-				// Query results
-				const allModels = yield* service.getLatestModels()
-				const stats = yield* service.getModelDataStats()
-
-				const duration = Date.now() - startTime
-
-				expect(duration).toBeLessThan(10000) // Should complete in reasonable time
-				expect(allModels.length).toBeGreaterThanOrEqual(50)
-				expect(stats.totalModels).toBeGreaterThanOrEqual(50)
-
-				return { duration, modelCount: allModels.length }
-			})
-
-			try {
-				const result = await Effect.runPromise(
-					program.pipe(Effect.provide(ModelDataServiceLive), Effect.timeout(15000))
-				)
-				expect(result.modelCount).toBeGreaterThanOrEqual(50)
-			} catch (error) {
-				expect(error).toBeDefined()
-			}
-		}, { timeout: 20000 })
+			},
+			{ timeout: 20000 },
+		)
 	})
 })

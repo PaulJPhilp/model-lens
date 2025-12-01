@@ -5,8 +5,8 @@
  * to support test development across all test suites.
  */
 
-import type { Model } from "../../lib/types"
 import { Effect } from "effect"
+import type { Model } from "../../lib/types"
 
 /**
  * Test Data Generators
@@ -51,7 +51,7 @@ export const generators = {
 				id: `model-${i}`,
 				name: `Model ${i}`,
 				...overrides,
-			})
+			}),
 		)
 	},
 
@@ -60,7 +60,7 @@ export const generators = {
 	 */
 	createModelsByProvider: (
 		providers: string[],
-		modelsPerProvider: number = 2
+		modelsPerProvider: number = 2,
 	): Model[] => {
 		const models: Model[] = []
 		providers.forEach((provider) => {
@@ -70,7 +70,7 @@ export const generators = {
 						id: `${provider}-${i}`,
 						provider,
 						name: `${provider} Model ${i}`,
-					})
+					}),
 				)
 			}
 		})
@@ -86,7 +86,7 @@ export const generators = {
 				id: `price-${i}`,
 				inputCost: price,
 				outputCost: price * 2,
-			})
+			}),
 		)
 	},
 
@@ -98,7 +98,7 @@ export const generators = {
 			generators.createModel({
 				id: `context-${i}`,
 				contextWindow: window,
-			})
+			}),
 		)
 	},
 
@@ -129,7 +129,7 @@ export const generators = {
 				status: i === 0 ? "completed" : "pending",
 				totalFetched: i * 10,
 				totalStored: i * 10,
-			})
+			}),
 		)
 	},
 }
@@ -159,7 +159,9 @@ export const assertions = {
 	 * Assert a model has specific properties
 	 */
 	hasProperties: (model: any, properties: string[]): boolean => {
-		return properties.every((prop) => prop in model && model[prop] !== undefined)
+		return properties.every(
+			(prop) => prop in model && model[prop] !== undefined,
+		)
 	},
 
 	/**
@@ -167,10 +169,7 @@ export const assertions = {
 	 */
 	isValidPricing: (inputCost: number, outputCost: number): boolean => {
 		return (
-			inputCost >= 0 &&
-			outputCost >= 0 &&
-			inputCost < 1000 &&
-			outputCost < 1000
+			inputCost >= 0 && outputCost >= 0 && inputCost < 1000 && outputCost < 1000
 		)
 	},
 
@@ -185,7 +184,9 @@ export const assertions = {
 	 * Assert models are identical (used for integrity testing)
 	 */
 	modelsEqual: (m1: Model, m2: Model, ignoreFields: string[] = []): boolean => {
-		const fieldsToCheck = Object.keys(m1).filter((k) => !ignoreFields.includes(k))
+		const fieldsToCheck = Object.keys(m1).filter(
+			(k) => !ignoreFields.includes(k),
+		)
 		return fieldsToCheck.every((field) => {
 			const v1 = (m1 as any)[field]
 			const v2 = (m2 as any)[field]
@@ -201,7 +202,7 @@ export const assertions = {
 	/**
 	 * Assert array contains at least one item matching predicate
 	 */
-	containsMatch: <T,>(array: T[], predicate: (item: T) => boolean): boolean => {
+	containsMatch: <T>(array: T[], predicate: (item: T) => boolean): boolean => {
 		return array.some(predicate)
 	},
 
@@ -228,7 +229,9 @@ export const performance = {
 	/**
 	 * Measure operation duration
 	 */
-	measureDuration: async <T,>(fn: () => Promise<T>): Promise<{ result: T; duration: number }> => {
+	measureDuration: async <T>(
+		fn: () => Promise<T>,
+	): Promise<{ result: T; duration: number }> => {
 		const start = Date.now()
 		const result = await fn()
 		const duration = Date.now() - start
@@ -249,8 +252,12 @@ export const performance = {
 		min: Math.min(...durations),
 		max: Math.max(...durations),
 		avg: durations.reduce((a, b) => a + b, 0) / durations.length,
-		p95: durations.sort((a, b) => a - b)[Math.ceil(durations.length * 0.95) - 1],
-		p99: durations.sort((a, b) => a - b)[Math.ceil(durations.length * 0.99) - 1],
+		p95: durations.sort((a, b) => a - b)[
+			Math.ceil(durations.length * 0.95) - 1
+		],
+		p99: durations.sort((a, b) => a - b)[
+			Math.ceil(durations.length * 0.99) - 1
+		],
 	}),
 }
 
@@ -348,9 +355,9 @@ export const effectUtils = {
 	/**
 	 * Run an effect and capture both success and error
 	 */
-	runEffect: async <A, E, R,>(
+	runEffect: async <A, E, R>(
 		effect: Effect.Effect<A, E, R>,
-		layer?: any
+		layer?: any,
 	): Promise<{ success: boolean; value?: A; error?: E }> => {
 		try {
 			const value = layer
@@ -365,20 +372,26 @@ export const effectUtils = {
 	/**
 	 * Run effect with timeout
 	 */
-	runWithTimeout: async <A, E, R,>(
+	runWithTimeout: async <A, E, R>(
 		effect: Effect.Effect<A, E, R>,
 		timeoutMs: number,
-		layer?: any
-	): Promise<{ success: boolean; value?: A; error?: string; timedOut: boolean }> => {
+		layer?: any,
+	): Promise<{
+		success: boolean
+		value?: A
+		error?: string
+		timedOut: boolean
+	}> => {
 		try {
 			const result = layer
 				? await Effect.runPromise(
-						effect.pipe(Effect.timeout(timeoutMs), Effect.provide(layer))
-				  )
+						effect.pipe(Effect.timeout(timeoutMs), Effect.provide(layer)),
+					)
 				: await Effect.runPromise(effect.pipe(Effect.timeout(timeoutMs)))
 			return { success: true, value: result, timedOut: false }
 		} catch (error) {
-			const isTimeout = error instanceof Error && error.message.includes("timeout")
+			const isTimeout =
+				error instanceof Error && error.message.includes("timeout")
 			return {
 				success: false,
 				error: error instanceof Error ? error.message : String(error),
@@ -395,7 +408,8 @@ export const dbUtils = {
 	/**
 	 * Generate test sync ID
 	 */
-	generateSyncId: (): string => `sync-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+	generateSyncId: (): string =>
+		`sync-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
 
 	/**
 	 * Check if error is database-related
@@ -437,7 +451,11 @@ export const responseUtils = {
 	 * Validate success response structure
 	 */
 	isSuccessResponse: (response: any): boolean => {
-		return responseUtils.isValidResponse(response) && "data" in response && "meta" in response
+		return (
+			responseUtils.isValidResponse(response) &&
+			"data" in response &&
+			"meta" in response
+		)
 	},
 
 	/**

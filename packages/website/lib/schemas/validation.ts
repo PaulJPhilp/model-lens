@@ -14,8 +14,9 @@ export const BooleanSchema = Schema.Boolean
  * Ensures input is a valid UUID v4 format
  */
 export const UUIDSchema = Schema.String.pipe(
-	Schema.pattern(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
-	Schema.description("Valid UUID v4 format"),
+	Schema.pattern(
+		/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+	),
 )
 
 /**
@@ -57,7 +58,6 @@ export const DateStringSchema = Schema.String.pipe(
 export const SafeStringSchema = Schema.String.pipe(
 	Schema.pattern(/^[a-zA-Z0-9_-]+$/),
 	Schema.maxLength(255),
-	Schema.description("Alphanumeric, hyphens, and underscores only"),
 )
 
 /**
@@ -67,7 +67,6 @@ export const SafeStringSchema = Schema.String.pipe(
 export const ProviderSchema = Schema.String.pipe(
 	Schema.pattern(/^[a-z0-9]+([._-]?[a-z0-9]+)*$/),
 	Schema.maxLength(50),
-	Schema.description("Provider identifier format"),
 )
 
 /**
@@ -75,11 +74,7 @@ export const ProviderSchema = Schema.String.pipe(
  * Safe for integer parameters with enforced range
  */
 export const BoundedIntSchema = (min: number, max: number) =>
-	Schema.Number.pipe(
-		Schema.int(),
-		Schema.between(min, max),
-		Schema.description(`Integer between ${min} and ${max}`),
-	)
+	Schema.Number.pipe(Schema.int(), Schema.between(min, max))
 
 // API Request/Response schemas
 export const GetModelsRequestSchema = Schema.Struct({
@@ -269,16 +264,22 @@ export function sanitizeString(input: string, maxLength = 1000): string {
 	return input
 		.slice(0, maxLength) // Enforce max length
 		.trim() // Remove leading/trailing whitespace
-		.replace(/[<>\"'`]/g, "") // Remove HTML/script characters
+		.replace(/[<>"'`]/g, "") // Remove HTML/script characters
 }
 
 /**
  * Validate and sanitize user identifier
  * Ensures ID is in valid format (UUID, email, alphanumeric)
  */
-export function validateUserId(userId: string | undefined): Effect.Effect<string, ParseResult.ParseError> {
+export function validateUserId(
+	userId: string | undefined,
+): Effect.Effect<string, ParseResult.ParseError> {
 	if (!userId) {
-		return Effect.fail(new ParseResult.Type(undefined as any, userId, "User ID is required"))
+		return Effect.fail(
+			ParseResult.fail(
+				new ParseResult.Type(SafeStringSchema, userId, "User ID is required"),
+			),
+		)
 	}
 
 	return validateRequest(SafeStringSchema, userId)

@@ -1,5 +1,5 @@
-import { Effect } from "effect"
 import { HttpMiddleware, HttpServerRequest } from "@effect/platform"
+import { Effect } from "effect"
 
 /**
  * Logger middleware that logs incoming requests and outgoing responses
@@ -12,9 +12,7 @@ export const createLoggerMiddleware = (): HttpMiddleware.HttpMiddleware =>
 			const startTime = Date.now()
 
 			// Log incoming request
-			console.log(
-				`➡️  ${request.method} ${request.url}`
-			)
+			console.log(`➡️  ${request.method} ${request.url}`)
 
 			// Execute the app handler
 			const response = yield* app
@@ -24,9 +22,9 @@ export const createLoggerMiddleware = (): HttpMiddleware.HttpMiddleware =>
 
 			// Log outgoing response with status and duration
 			console.log(
-				`⬅️  ${request.method} ${request.url} - ${response.status} (${duration}ms)`
+				`⬅️  ${request.method} ${request.url} - ${response.status} (${duration}ms)`,
 			)
 
 			return response
-		})
+		}),
 	)

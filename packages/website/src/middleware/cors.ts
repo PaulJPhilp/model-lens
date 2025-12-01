@@ -1,5 +1,5 @@
-import { Effect } from "effect"
 import { HttpMiddleware, HttpServerResponse } from "@effect/platform"
+import { Effect } from "effect"
 
 /**
  * CORS middleware that adds standard CORS headers to all responses
@@ -18,17 +18,20 @@ export const createCorsMiddleware = (): HttpMiddleware.HttpMiddleware =>
 				// Allow common HTTP methods
 				HttpServerResponse.setHeader(
 					"Access-Control-Allow-Methods",
-					"GET, POST, PUT, DELETE, PATCH, OPTIONS"
+					"GET, POST, PUT, DELETE, PATCH, OPTIONS",
 				),
 				// Allow common headers
 				HttpServerResponse.setHeader(
 					"Access-Control-Allow-Headers",
-					"Content-Type, Authorization, X-Requested-With"
+					"Content-Type, Authorization, X-Requested-With",
 				),
 				// Cache preflight requests for 24 hours
 				HttpServerResponse.setHeader("Access-Control-Max-Age", "86400"),
 				// Allow credentials if needed
-				HttpServerResponse.setHeader("Access-Control-Allow-Credentials", "true")
+				HttpServerResponse.setHeader(
+					"Access-Control-Allow-Credentials",
+					"true",
+				),
 			)
-		})
+		}),
 	)

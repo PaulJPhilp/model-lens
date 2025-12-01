@@ -1,11 +1,12 @@
 /* @vitest-environment node */
-import { describe, expect, it, vi, beforeEach } from "vitest"
+
 import { Effect, Schedule } from "effect"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
+	databaseRetryPolicy,
 	defaultApiRetryPolicy,
 	fastRetryPolicy,
 	slowRetryPolicy,
-	databaseRetryPolicy,
 	withRetry,
 	withRetryAndLogging,
 } from "./retry"
@@ -147,9 +148,9 @@ describe("Retry Policies", () => {
 
 			expect(consoleError).toHaveBeenCalled()
 			const errorLogs = consoleError.mock.calls.map((c) => c[0])
-			expect(errorLogs.some((l) => l.includes("failed after all retries"))).toBe(
-				true,
-			)
+			expect(
+				errorLogs.some((l) => l.includes("failed after all retries")),
+			).toBe(true)
 
 			consoleError.mockRestore()
 		})
@@ -160,7 +161,11 @@ describe("Retry Policies", () => {
 			const minimalPolicy = Schedule.recurs(0)
 
 			const operationName = "MySpecialOperation"
-			const retriedEffect = withRetryAndLogging(effect, operationName, minimalPolicy)
+			const retriedEffect = withRetryAndLogging(
+				effect,
+				operationName,
+				minimalPolicy,
+			)
 
 			await expect(Effect.runPromise(retriedEffect)).rejects.toThrow()
 
@@ -192,7 +197,11 @@ describe("Retry Policies", () => {
 			const effect = Effect.fail(testError)
 			const minimalPolicy = Schedule.recurs(0)
 
-			const retriedEffect = withRetryAndLogging(effect, "ErrorOp", minimalPolicy)
+			const retriedEffect = withRetryAndLogging(
+				effect,
+				"ErrorOp",
+				minimalPolicy,
+			)
 
 			await expect(Effect.runPromise(retriedEffect)).rejects.toThrow()
 
@@ -213,7 +222,11 @@ describe("Retry Policies", () => {
 			})
 
 			const minimalPolicy = Schedule.recurs(1)
-			const retriedEffect = withRetryAndLogging(effect, "AsyncOp", minimalPolicy)
+			const retriedEffect = withRetryAndLogging(
+				effect,
+				"AsyncOp",
+				minimalPolicy,
+			)
 			const result = await Effect.runPromise(retriedEffect)
 
 			expect(result).toBe("async-success")
@@ -360,7 +373,9 @@ describe("Retry Policies", () => {
 			})
 
 			// Use a policy with exponential backoff
-			const expPolicy = Schedule.exponential(10).pipe(Schedule.compose(Schedule.recurs(2)))
+			const expPolicy = Schedule.exponential(10).pipe(
+				Schedule.compose(Schedule.recurs(2)),
+			)
 
 			const retriedEffect = withRetry(effect, expPolicy)
 			const result = await Effect.runPromise(retriedEffect)
