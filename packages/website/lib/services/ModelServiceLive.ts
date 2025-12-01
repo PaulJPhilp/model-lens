@@ -92,7 +92,7 @@ export const ModelServiceLive = Layer.succeed(ModelService, {
 	fetchModels: Effect.gen(function* () {
 		// Check cache first
 		const cacheService = yield* CacheService
-		const cachedModels = yield* (cacheService.get as any)(CACHE_KEYS.MODELS)
+		const cachedModels = yield* cacheService.get<Model[] | null>(CACHE_KEYS.MODELS)
 
 		if (cachedModels !== null) {
 			console.log(
@@ -105,7 +105,9 @@ export const ModelServiceLive = Layer.succeed(ModelService, {
 		console.log("🌐 [ModelService] Fetching fresh models from external APIs")
 
 		// Fetch from all sources with partial failure handling
-		const fetchResults = (yield* Effect.all(
+		const fetchResults: Array<
+			{ readonly _tag: "Right"; readonly right: Model[] } | { readonly _tag: "Left"; readonly left: Error }
+		> = yield* Effect.all(
 			[
 				Effect.either(
 					// Fetch from models.dev
@@ -152,7 +154,7 @@ export const ModelServiceLive = Layer.succeed(ModelService, {
 							),
 						),
 						"models.dev API fetch",
-					) as any,
+					),
 				),
 
 				Effect.either(
@@ -200,7 +202,7 @@ export const ModelServiceLive = Layer.succeed(ModelService, {
 							),
 						),
 						"OpenRouter API fetch",
-					) as any,
+					),
 				),
 
 				Effect.either(
@@ -223,9 +225,9 @@ export const ModelServiceLive = Layer.succeed(ModelService, {
 									}`,
 								),
 						}).pipe(
-							Effect.flatMap((data) =>
+							Effect.flatMap((data: unknown) =>
 								Effect.try({
-									try: () => transformHuggingFaceModel(data as any),
+									try: () => transformHuggingFaceModel(data as Record<string, unknown>),
 									catch: (error) =>
 										Effect.fail(
 											new Error(
@@ -271,11 +273,11 @@ export const ModelServiceLive = Layer.succeed(ModelService, {
 										const lines = csvText.trim().split("\n")
 										const headers = lines[0].split(",")
 
-										const models: any[] = []
+										const models: Record<string, unknown>[] = []
 										for (let i = 1; i < lines.length; i++) {
 											const values = lines[i].split(",")
 											if (values.length >= headers.length) {
-												const model: any = {}
+												const model: Record<string, unknown> = {}
 												headers.forEach((header, index) => {
 													if (header === "intelligenceIndex") {
 														model[header] = parseFloat(values[index]) || 0
@@ -309,7 +311,7 @@ export const ModelServiceLive = Layer.succeed(ModelService, {
 				),
 			],
 			{ concurrency: 4 },
-		)) as any
+		)
 
 		// Process results and collect any errors
 		const modelsDevModels =
@@ -417,7 +419,7 @@ export const ModelServiceLive = Layer.succeed(ModelService, {
 		}
 
 		return allModels
-	}) as any as Effect.Effect<Model[], unknown, unknown>,
+	}),
 
 	fetchModelsFromAPI: withRetryAndLogging(
 		Effect.tryPromise({

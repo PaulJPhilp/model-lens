@@ -103,8 +103,7 @@ const getSyncHistory = HttpRouter.get(
   )
 )
 
-export const adminSyncRouter = pipe(
-  HttpRouter.empty,
-  HttpRouter.concat(triggerSync as any),
-  HttpRouter.concat(getSyncHistory as any)
-) as any
+export const adminSyncRouter = HttpRouter.concat(
+  HttpRouter.concat(HttpRouter.empty, triggerSync),
+  getSyncHistory,
+)

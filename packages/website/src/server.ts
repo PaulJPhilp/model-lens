@@ -29,8 +29,8 @@ const app = pipe(
     })
   ),
   // Mount all route routers
-  HttpRouter.concat(modelsRouter as any),
-  HttpRouter.concat(adminSyncRouter as any),
+  (router) => HttpRouter.concat(router, modelsRouter),
+  (router) => HttpRouter.concat(router, adminSyncRouter),
   // 404 handler for undefined routes
   HttpRouter.all(
     "/*",
@@ -77,7 +77,8 @@ const main = async () => {
   const serverLayer = BunHttpServer.layer({ port })
   const allLayers = Layer.merge(serverLayer, AppLayer)
 
-  const program = (HttpServer.serve(app) as any).pipe(
+  const program = pipe(
+    HttpServer.serve(app),
     Effect.provide(allLayers)
   )
 
