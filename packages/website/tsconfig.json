@@ -13,7 +13,7 @@
 		"isolatedModules": true,
 		"incremental": true,
 		"baseUrl": ".",
-		"types": ["bun-types"],
+		"types": [],
 		"paths": {
 			"@/*": ["./src/*"],
 			"@services/*": ["./src/services/*", "./lib/services/*"],
