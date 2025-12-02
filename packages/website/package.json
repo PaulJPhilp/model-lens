@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "bun run src/server.ts",
 		"start": "bun run src/server.ts",
-		"build": "tsc --noEmit",
+		"build": "tsc --noEmit --skipLibCheck",
 		"check": "tsc --noEmit",
 		"format": "biome format --write .",
 		"lint": "biome check --write .",
