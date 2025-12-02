@@ -17,11 +17,8 @@ export class RateLimitService extends Effect.Service<RateLimitService>()(
 	{
 		methods: {
 			/** Check rate limit for a given identifier */
-			checkRateLimit: (
-				identifier: string,
-				limit: number,
-				window: number,
-			) => Effect.Effect<RateLimitResult, never>,
+			checkRateLimit: (identifier: string, limit: number, window: number) =>
+				Effect.Effect<RateLimitResult, never>,
 		},
 	},
 ) {}
